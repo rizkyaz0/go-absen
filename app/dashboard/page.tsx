@@ -16,7 +16,9 @@ export default function KaryawanDashboard() {
         transition={{ duration: 0.5 }}
         className="mb-8"
       >
-        <h1 className="text-2xl font-bold text-center">Selamat Datang, Rizky 👋</h1>
+        <h1 className="text-2xl font-bold text-center">
+          Selamat Datang, Rizky 👋
+        </h1>
         <p className="text-gray-400 text-sm text-center">Dashboard Karyawan</p>
       </motion.header>
 
@@ -37,15 +39,19 @@ export default function KaryawanDashboard() {
           <StatCard
             title="Kehadiran"
             icon={CalendarDays}
-            value="20/22"
             subtitle="Bulan ini"
+            apiEndpoint="/api/stats/kehadiran"
+            field="value"
           />
+
           <StatCard
             title="Sisa Cuti"
             icon={CalendarDays}
-            value="1"
             subtitle="Bulan ini"
+            apiEndpoint={`/api/stats/cuti?userId=4`}
+            field="value"
           />
+
           {/* Bisa tambahkan lagi misalnya: */}
           {/* <StatCard title="Cuti" icon={Calendar} value="1" subtitle="Bulan ini" /> */}
         </div>

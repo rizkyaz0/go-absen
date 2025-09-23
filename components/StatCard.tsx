@@ -1,16 +1,38 @@
-// components/StatCard.jsx
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface StatCardProps {
   title: string;
   icon?: React.ElementType;
-  value: React.ReactNode;
   subtitle?: string;
+  apiEndpoint?: string; // optional: ambil data dari API
+  field?: string; // optional: field yang dipakai
 }
 
-export default function StatCard({ title, icon: Icon, value, subtitle }: StatCardProps) {
+export default function StatCard({ title, icon: Icon, subtitle, apiEndpoint, field }: StatCardProps) {
+  const [value, setValue] = useState("...");
+
+  useEffect(() => {
+    if (!apiEndpoint) return;
+    const fetchData = async () => {
+      try {
+        const res = await fetch(apiEndpoint);
+        const json = await res.json();
+        if (field) {
+          setValue(json[field] ?? "0");
+        } else {
+          setValue(Array.isArray(json) ? json.length.toString() : "0");
+        }
+      } catch (err) {
+        console.error("Stat fetch error:", err);
+        setValue("0");
+      }
+    };
+    fetchData();
+  }, [apiEndpoint, field]);
+
   return (
     <Card className="bg-white/10 backdrop-blur-lg border border-white/20 text-white">
       <CardHeader className="pb-2">

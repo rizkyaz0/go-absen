@@ -12,41 +12,53 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Home } from "lucide-react"; // ✅ tambahkan ini
+import { Home } from "lucide-react";
 
 export default function CutiModal() {
   const [tanggalMulai, setTanggalMulai] = useState("");
   const [tanggalAkhir, setTanggalAkhir] = useState("");
   const [alasan, setAlasan] = useState("");
+  const userId = 4; // sementara hardcode, nanti ambil dari auth
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log({
-      tanggalMulai,
-      tanggalAkhir,
-      alasan,
-    });
+    try {
+      const res = await fetch("/api/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          startDate: tanggalMulai,
+          endDate: tanggalAkhir,
+          type: "Cuti",
+          status: "Pending",
+          reason: alasan,
+        }),
+      });
 
-    alert("✅ Pengajuan cuti berhasil diajukan!");
+      if (!res.ok) throw new Error("Gagal ajukan cuti");
 
-    setTanggalMulai("");
-    setTanggalAkhir("");
-    setAlasan("");
+      alert("✅ Pengajuan cuti berhasil!");
+      setTanggalMulai("");
+      setTanggalAkhir("");
+      setAlasan("");
+    } catch (err) {
+      console.error(err);
+      alert("❌ Gagal ajukan cuti");
+    }
   };
 
   return (
     <Dialog>
-      {/* Tombol */}
       <DialogTrigger asChild>
         <Button
           variant="outline"
-          className="w-full py-6 border-white/20 text-white bg-dark hover:bg-gray-300 cursor-pointer sm:w-auto sm:px-6 sm:py-3"
+          className="w-full py-6 border-white/20 text-white bg-dark hover:bg-gray-700 sm:w-auto flex items-center justify-center"
         >
           <Home className="mr-2" size={18} /> Ajukan Cuti/Izin
         </Button>
       </DialogTrigger>
 
-      {/* Konten modal */}
       <DialogContent className="bg-white text-black rounded-lg p-6 shadow-xl w-[90%] max-w-md">
         <DialogTitle className="text-lg font-semibold">
           Form Pengajuan Cuti
@@ -56,7 +68,7 @@ export default function CutiModal() {
         </DialogDescription>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
+          <div>
             <Label htmlFor="mulai">Tanggal Mulai</Label>
             <Input
               id="mulai"
@@ -67,7 +79,7 @@ export default function CutiModal() {
             />
           </div>
 
-          <div className="space-y-1">
+          <div>
             <Label htmlFor="akhir">Tanggal Akhir</Label>
             <Input
               id="akhir"
@@ -78,7 +90,7 @@ export default function CutiModal() {
             />
           </div>
 
-          <div className="space-y-1">
+          <div>
             <Label htmlFor="alasan">Alasan</Label>
             <Textarea
               id="alasan"
@@ -91,7 +103,7 @@ export default function CutiModal() {
 
           <Button
             type="submit"
-            className="w-full py-3 bg-green-600 text-white font-semibold"
+            className="w-full py-3 bg-green-600 text-white hover:bg-green-700 transition"
           >
             Kirim Pengajuan
           </Button>
