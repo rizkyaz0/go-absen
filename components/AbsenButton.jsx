@@ -1,4 +1,3 @@
-// components/AbsenButton.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,12 +7,45 @@ export default function AbsenButton() {
   const [sudahMasuk, setSudahMasuk] = useState(false);
   const [time, setTime] = useState(null);
   const [jamPulang, setJamPulang] = useState(17);
+  const [absenceId, setAbsenceId] = useState(null); // untuk update absen pulang
+  const userId = 4; // sementara hardcode
+  const shiftId = 1; // default shift
+  const location = "Kantor Pusat"; // default lokasi
 
+  // Update jam real-time
   useEffect(() => {
     setTime(new Date());
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Cek absensi hari ini
+  useEffect(() => {
+    async function fetchTodayAbsence() {
+      try {
+        const res = await fetch("/api/absences");
+        if (!res.ok) throw new Error("Gagal fetch absensi");
+        const absences = await res.json();
+
+        const today = new Date().toISOString().slice(0, 10);
+        const myTodayAbsence = absences.find(
+          (a) => a.userId === userId && a.date.slice(0, 10) === today
+        );
+
+        if (
+          myTodayAbsence &&
+          myTodayAbsence.checkIn &&
+          !myTodayAbsence.checkOut
+        ) {
+          setSudahMasuk(true);
+          setAbsenceId(myTodayAbsence.id);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    fetchTodayAbsence();
+  }, [userId]);
 
   const tanggalDisplay = time
     ? time.toLocaleDateString("id-ID", {
@@ -34,14 +66,63 @@ export default function AbsenButton() {
       })
     : "—";
 
-  const handleAbsenMasuk = () => {
-    setSudahMasuk(true);
-    console.log("✅ Absen Masuk", time?.toString());
+  const handleAbsenMasuk = async () => {
+    try {
+      const checkInTime = new Date();
+      const res = await fetch("/api/absences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          shiftId,
+          date: checkInTime.toISOString(),
+          checkIn: checkInTime.toISOString(),
+          status: "Hadir",
+          location,
+          note: "Datang tepat waktu",
+        }),
+      });
+      if (!res.ok) throw new Error("Gagal absen masuk");
+
+      const data = await res.json();
+      setAbsenceId(data.id);
+      setSudahMasuk(true);
+      alert("✅ Absen Masuk Berhasil!");
+    } catch (err) {
+      console.error(err);
+      alert("❌ Absen Masuk Gagal");
+    }
   };
 
-  const handleAbsenPulang = () => {
-    setSudahMasuk(false);
-    console.log("✅ Absen Pulang", time?.toString());
+  const handleAbsenPulang = async () => {
+    if (!absenceId) {
+      alert("❌ Absensi masuk belum terdeteksi");
+      return;
+    }
+
+    try {
+      const checkOutTime = new Date();
+      checkOutTime.setHours(jamPulang, 0, 0, 0);
+
+      const res = await fetch("/api/absences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: absenceId,
+          checkOut: checkOutTime.toISOString(),
+          status: "Pulang",
+          note: "Pulang sesuai jadwal",
+        }),
+      });
+      if (!res.ok) throw new Error("Gagal absen pulang");
+
+      setSudahMasuk(false);
+      setAbsenceId(null);
+      alert("✅ Absen Pulang Berhasil!");
+    } catch (err) {
+      console.error(err);
+      alert("❌ Absen Pulang Gagal");
+    }
   };
 
   return (
@@ -52,21 +133,29 @@ export default function AbsenButton() {
         <p className="text-3xl font-bold">{jamDisplay} WIB</p>
       </div>
 
-      {/* Dropdown pilih jam pulang (hanya muncul setelah absen masuk) */}
+      {/* Dropdown Jam Pulang */}
       {sudahMasuk && (
         <div className="w-full text-center">
           <label className="text-sm text-gray-400 block mb-1">
-            Geser Jam Pulang
+            Pilih Jam Pulang
           </label>
           <select
             value={jamPulang}
             onChange={(e) => setJamPulang(Number(e.target.value))}
-            className="w-full p-2 rounded-md bg-white/5 text-white border border-white/10 sm:w-auto sm:px-25 sm:py-3"
+            className="w-full p-2 rounded-md bg-white/5 text-white border border-white/10 sm:w-auto"
           >
-            <option className="text-black" value={14}>14:00</option>
-            <option className="text-black" value={18}>18:00</option>
-            <option className="text-black" value={19}>19:00</option>
-            <option className="text-black" value={20}>20:00</option>
+            <option className="text-black" value={16}>
+              16:00
+            </option>
+            <option className="text-black" value={17}>
+              17:00
+            </option>
+            <option className="text-black" value={18}>
+              18:00
+            </option>
+            <option className="text-black" value={19}>
+              19:00
+            </option>
           </select>
         </div>
       )}
@@ -75,14 +164,14 @@ export default function AbsenButton() {
       {!sudahMasuk ? (
         <Button
           onClick={handleAbsenMasuk}
-          className="w-full py-5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-lg shadow-lg sm:w-auto sm:px-25 sm:py-3"
+          className="w-full py-5 bg-gradient-to-r from-blue-500 to-cyan-400 text-lg shadow-lg sm:w-auto"
         >
           Absen Masuk
         </Button>
       ) : (
         <Button
           onClick={handleAbsenPulang}
-          className="w-full py-5 bg-gradient-to-r from-pink-500 to-purple-400 text-white text-lg shadow-lg sm:w-auto sm:px-25 sm:py-3"
+          className="w-full py-5 bg-gradient-to-r from-pink-500 to-purple-400 text-lg shadow-lg sm:w-auto"
         >
           Absen Pulang
         </Button>
