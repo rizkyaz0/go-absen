@@ -9,7 +9,6 @@ import {
   Users,
   Calendar,
   Clock,
-  Menu,
   ChevronLeft,
   LogOut
 } from "lucide-react";
@@ -45,10 +44,12 @@ export default function AdminLayout({ children }) {
   return (
     <div className="flex h-screen bg-gray-50/40">
       {/* Sidebar */}
-      <div className={cn(
-        "bg-white border-r transition-all duration-300 ease-in-out",
-        isSidebarOpen ? "w-64" : "w-[70px]"
-      )}>
+      <div
+        className={cn(
+          "bg-white border-r transition-all duration-300 ease-in-out flex flex-col h-full",
+          isSidebarOpen ? "w-64" : "w-[70px]"
+        )}
+      >
         {/* Header Sidebar */}
         <div className="p-4 border-b flex items-center justify-between">
           {isSidebarOpen ? (
@@ -62,15 +63,17 @@ export default function AdminLayout({ children }) {
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="h-8 w-8"
           >
-            <ChevronLeft className={cn(
-              "h-4 w-4 transition-transform",
-              !isSidebarOpen && "rotate-180"
-            )} />
+            <ChevronLeft
+              className={cn(
+                "h-4 w-4 transition-transform",
+                !isSidebarOpen && "rotate-180"
+              )}
+            />
           </Button>
         </div>
 
         {/* Navigation Menu */}
-        <nav className="p-4">
+        <nav className="p-4 flex-1">
           <ul className="space-y-2">
             {menuItems.map((item) => {
               const isActive = pathname === item.href;
@@ -85,9 +88,7 @@ export default function AdminLayout({ children }) {
                       )}
                     >
                       <item.icon className="w-4 h-4" />
-                      {isSidebarOpen && (
-                        <span className="ml-2">{item.label}</span>
-                      )}
+                      {isSidebarOpen && <span className="ml-2">{item.label}</span>}
                     </Button>
                   </Link>
                 </li>
@@ -97,7 +98,7 @@ export default function AdminLayout({ children }) {
         </nav>
 
         {/* Logout Button */}
-        <div className="absolute bottom-4 left-4 right-4">
+        <div className="p-4">
           <Button variant="outline" className="w-full justify-start">
             <LogOut className="w-4 h-4" />
             {isSidebarOpen && <span className="ml-2">Logout</span>}
