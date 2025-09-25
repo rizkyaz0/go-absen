@@ -42,6 +42,15 @@ export async function POST(req: Request) {
       maxAge: 60 * 60 * 24,
     });
 
+    // Login API
+    response.cookies.set({
+      name: "userId",
+      value: user.id.toString(),
+      path: "/",
+      httpOnly: true,
+      maxAge: 60 * 60 * 24,
+    });
+
     return response;
   } catch (error) {
     console.error(error);

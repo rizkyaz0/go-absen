@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,10 +18,30 @@ export default function CutiModal() {
   const [tanggalMulai, setTanggalMulai] = useState("");
   const [tanggalAkhir, setTanggalAkhir] = useState("");
   const [alasan, setAlasan] = useState("");
-  const userId = 4; // sementara hardcode, nanti ambil dari auth
+  const [userId, setUserId] = useState(null);
+
+  // Ambil userId dari login
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const res = await fetch("/api/me");
+        if (!res.ok) throw new Error("Gagal ambil user");
+        const data = await res.json();
+        setUserId(data.id);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    fetchUser();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!userId) {
+      alert("❌ User belum terdeteksi");
+      return;
+    }
+
     try {
       const res = await fetch("/api/leave", {
         method: "POST",

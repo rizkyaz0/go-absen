@@ -7,10 +7,26 @@ export default function AbsenButton() {
   const [sudahMasuk, setSudahMasuk] = useState(false);
   const [time, setTime] = useState(null);
   const [jamPulang, setJamPulang] = useState(17);
-  const [absenceId, setAbsenceId] = useState(null); // untuk update absen pulang
-  const userId = 4; // sementara hardcode
-  const shiftId = 1; // default shift
-  const location = "Kantor Pusat"; // default lokasi
+  const [absenceId, setAbsenceId] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [shiftId, setShiftId] = useState(null);
+  const [location, setLocation] = useState("Kantor Pusat");
+
+  // Ambil info user yang login
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const res = await fetch("/api/me");
+        if (!res.ok) throw new Error("Gagal ambil user");
+        const data = await res.json();
+        setUserId(data.id);
+        setShiftId(data.shiftId || 1);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    fetchUser();
+  }, []);
 
   // Update jam real-time
   useEffect(() => {
@@ -21,6 +37,7 @@ export default function AbsenButton() {
 
   // Cek absensi hari ini
   useEffect(() => {
+    if (!userId) return;
     async function fetchTodayAbsence() {
       try {
         const res = await fetch("/api/absences");
@@ -67,6 +84,7 @@ export default function AbsenButton() {
     : "—";
 
   const handleAbsenMasuk = async () => {
+    if (!userId || !shiftId) return;
     try {
       const checkInTime = new Date();
       const res = await fetch("/api/absences", {
@@ -99,7 +117,6 @@ export default function AbsenButton() {
       alert("❌ Absensi masuk belum terdeteksi");
       return;
     }
-
     try {
       const checkOutTime = new Date();
       checkOutTime.setHours(jamPulang, 0, 0, 0);
@@ -127,13 +144,11 @@ export default function AbsenButton() {
 
   return (
     <div className="flex flex-col gap-6 items-center w-full">
-      {/* Tanggal & Jam */}
       <div className="text-center">
         <p className="text-lg font-semibold">{tanggalDisplay}</p>
         <p className="text-3xl font-bold">{jamDisplay} WIB</p>
       </div>
 
-      {/* Dropdown Jam Pulang */}
       {sudahMasuk && (
         <div className="w-full text-center">
           <label className="text-sm text-gray-400 block mb-1">
@@ -160,7 +175,6 @@ export default function AbsenButton() {
         </div>
       )}
 
-      {/* Tombol Absen */}
       {!sudahMasuk ? (
         <Button
           onClick={handleAbsenMasuk}
