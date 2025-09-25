@@ -87,7 +87,10 @@ export default function CutiModal() {
           Isi tanggal dan alasan cuti. HRD akan meninjau pengajuan.
         </DialogDescription>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 max-w-sm mx-auto w-full"
+        >
           <div>
             <Label htmlFor="mulai">Tanggal Mulai</Label>
             <Input
