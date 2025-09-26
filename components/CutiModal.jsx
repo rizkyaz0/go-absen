@@ -62,6 +62,7 @@ export default function CutiModal() {
       setTanggalMulai("");
       setTanggalAkhir("");
       setAlasan("");
+      window.location.reload();
     } catch (err) {
       console.error(err);
       alert("❌ Gagal ajukan cuti");

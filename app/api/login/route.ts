@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     }
 
     // Tentukan redirect URL
-    const redirectUrl = user.roleId === 1 ? "/admin" : "/dashboard";
+    const redirectUrl = user.roleId === 3 ? "/admin/dashboard" : "/dashboard";
 
     const response = NextResponse.json({
       message: "Login berhasil",

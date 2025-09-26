@@ -3,7 +3,7 @@ import { prisma } from "@/prisma";
 
 export async function GET() {
   const users = await prisma.user.findMany({
-    include: { role: true, status: true },
+    include: { role: true, status: true, password: false, email: false },
   });
   return NextResponse.json(users);
 }
