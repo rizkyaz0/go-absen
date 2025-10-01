@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/prisma";
 
-export async function GET(){
-    const leaves = await prisma.leaveRequest.findMany({include: {user: true}})
-    return NextResponse.json(leaves)
+export async function GET() {
+  const leaves = await prisma.leaveRequest.findMany({
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          roleId: true,
+          statusId: true,
+          createdAt: true,
+          updatedAt: true,
+          // password tidak disertakan
+        },
+      },
+    },
+  });
+  return NextResponse.json(leaves);
 }
 
 export async function POST(req: NextRequest) {

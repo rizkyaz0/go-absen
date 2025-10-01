@@ -3,7 +3,21 @@ import { prisma } from "@/prisma";
 
 export async function GET() {
   const absences = await prisma.absence.findMany({
-    include: { user: true, shift: true },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          roleId: true,
+          statusId: true,
+          createdAt: true,
+          updatedAt: true,
+          // password tidak disertakan
+        },
+      },
+      shift: true,
+    },
     orderBy: { date: "desc" },
   });
   return NextResponse.json(absences);
