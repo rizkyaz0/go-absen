@@ -9,7 +9,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ActionButton } from "@/components/ActionButton";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 
@@ -67,16 +74,22 @@ export default function KaryawanPage() {
   };
 
   // Konfirmasi hapus
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (selectedUserId === null) return;
 
-    // TODO: panggil API hapus user di sini
-    // Contoh:
-    // await fetch(`/api/users/${selectedUserId}`, { method: "DELETE" });
+    try {
+      const res = await fetch(`/api/users/${selectedUserId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Gagal menghapus user");
 
-    // Simulasi hapus di UI
-    setUsers((prev) => prev.filter((user) => user.id !== selectedUserId));
-    setSelectedUserId(null);
+      // Hapus di UI setelah berhasil
+      setUsers((prev) => prev.filter((user) => user.id !== selectedUserId));
+      setSelectedUserId(null);
+      setDeleteModalOpen(false);
+    } catch (error) {
+      alert((error as Error).message);
+    }
   };
 
   return (
@@ -121,11 +134,21 @@ export default function KaryawanPage() {
                   <TableRow key={user.id}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.roleId ? roleMap[user.roleId] || "-" : "-"}</TableCell>
-                    <TableCell>{user.statusId ? statusMap[user.statusId] || "-" : "-"}</TableCell>
+                    <TableCell>
+                      {user.roleId ? roleMap[user.roleId] || "-" : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {user.statusId ? statusMap[user.statusId] || "-" : "-"}
+                    </TableCell>
                     <TableCell className="flex space-x-2">
-                      <ActionButton variant="edit" onClick={() => handleEdit(user.id)} />
-                      <ActionButton variant="delete" onClick={() => handleDeleteClick(user.id)} />
+                      <ActionButton
+                        variant="edit"
+                        onClick={() => handleEdit(user.id)}
+                      />
+                      <ActionButton
+                        variant="delete"
+                        onClick={() => handleDeleteClick(user.id)}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

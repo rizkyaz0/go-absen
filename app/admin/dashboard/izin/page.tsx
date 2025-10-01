@@ -1,7 +1,6 @@
-// app/admin/dashboard/izin/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -14,55 +13,63 @@ import { Button } from "@/components/ui/button";
 
 interface Izin {
   id: number;
-  nama: string;
-  tipe: "Cuti" | "Izin Tidak Hadir";
-  tanggalMulai: string;
-  tanggalSelesai: string;
-  status: "Pending" | "Disetujui" | "Ditolak";
+  user: {
+    id: number;
+    name: string;
+    roleId: number;
+    statusId: number;
+  };
+  type: string;
+  startDate: string;
+  endDate: string;
+  status: "Pending" | "Approved" | "Rejected";
+  reason?: string;
 }
 
-const izinDataInitial: Izin[] = [
-  {
-    id: 1,
-    nama: "Budi",
-    tipe: "Cuti",
-    tanggalMulai: "2025-10-10",
-    tanggalSelesai: "2025-10-15",
-    status: "Pending",
-  },
-  {
-    id: 2,
-    nama: "Sari",
-    tipe: "Izin Tidak Hadir",
-    tanggalMulai: "2025-10-05",
-    tanggalSelesai: "2025-10-05",
-    status: "Pending",
-  },
-  // Add more dummy data or fetch from API
-];
-
 export default function IzinPage() {
-  const [izinData, setIzinData] = useState(izinDataInitial);
+  const [izinData, setIzinData] = useState<Izin[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleApprove = (id: number) => {
-    setIzinData((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: "Disetujui" } : item
-      )
-    );
+  // Fetch izin dari API
+  useEffect(() => {
+    const fetchIzin = async () => {
+      try {
+        const res = await fetch("/api/leave");
+        const data: Izin[] = await res.json();
+        setIzinData(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchIzin();
+  }, []);
+
+  // Update status izin (Approve / Reject)
+  const updateStatus = async (id: number, status: "Approved" | "Rejected") => {
+    try {
+      const res = await fetch(`/api/leave/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Gagal update status izin");
+
+      setIzinData((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status } : item))
+      );
+    } catch (err) {
+      alert((err as Error).message);
+    }
   };
 
-  const handleReject = (id: number) => {
-    setIzinData((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: "Ditolak" } : item
-      )
-    );
-  };
+  if (loading) return <p>Loading izin...</p>;
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Daftar Izin</h1>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -71,31 +78,38 @@ export default function IzinPage() {
             <TableHead>Tanggal Mulai</TableHead>
             <TableHead>Tanggal Selesai</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Alasan</TableHead>
             <TableHead>Aksi</TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody>
           {izinData.map((izin) => (
             <TableRow key={izin.id}>
-              <TableCell>{izin.nama}</TableCell>
-              <TableCell>{izin.tipe}</TableCell>
-              <TableCell>{izin.tanggalMulai}</TableCell>
-              <TableCell>{izin.tanggalSelesai}</TableCell>
+              <TableCell>{izin.user.name}</TableCell>
+              <TableCell>{izin.type}</TableCell>
+              <TableCell>
+                {new Date(izin.startDate).toLocaleDateString()}
+              </TableCell>
+              <TableCell>
+                {new Date(izin.endDate).toLocaleDateString()}
+              </TableCell>
               <TableCell>{izin.status}</TableCell>
+              <TableCell>{izin.reason || "-"}</TableCell>
               <TableCell className="flex space-x-2">
                 {izin.status === "Pending" ? (
                   <>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleApprove(izin.id)}
+                      onClick={() => updateStatus(izin.id, "Approved")}
                     >
                       Setujui
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleReject(izin.id)}
+                      onClick={() => updateStatus(izin.id, "Rejected")}
                     >
                       Tolak
                     </Button>

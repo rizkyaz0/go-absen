@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       where: {
         userId,
         type: "Cuti",
-        status: "Diterima",
+        status: "Approved",
       },
     });
 

@@ -12,7 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function EditKaryawanPage() {
   const router = useRouter();
@@ -20,15 +26,15 @@ export default function EditKaryawanPage() {
   const id = params?.id;
 
   const [name, setName] = useState("");
-  const [roleId, setRoleId] = useState<number | undefined>(undefined);
-  const [statusId, setStatusId] = useState<number | undefined>(undefined);
+  const [roleId, setRoleId] = useState<number | undefined>();
+  const [statusId, setStatusId] = useState<number | undefined>();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     if (!id) return;
 
-    async function fetchUser () {
+    const fetchUser = async () => {
       setLoadingData(true);
       try {
         const res = await fetch(`/api/users/${id}`);
@@ -42,16 +48,16 @@ export default function EditKaryawanPage() {
       } finally {
         setLoadingData(false);
       }
-    }
+    };
 
-    fetchUser ();
+    fetchUser();
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
-    setLoading(true);
 
+    setLoading(true);
     try {
       const res = await fetch(`/api/users/${id}`, {
         method: "PUT",
@@ -90,7 +96,6 @@ export default function EditKaryawanPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
-            {/* form fields */}
             <div>
               <Label htmlFor="name">Nama</Label>
               <Input
@@ -108,7 +113,6 @@ export default function EditKaryawanPage() {
               <Select
                 onValueChange={(value) => setRoleId(Number(value))}
                 value={roleId?.toString() || ""}
-                defaultValue=""
               >
                 <SelectTrigger id="role" className="w-full">
                   <SelectValue placeholder="Pilih role" />
@@ -126,7 +130,6 @@ export default function EditKaryawanPage() {
               <Select
                 onValueChange={(value) => setStatusId(Number(value))}
                 value={statusId?.toString() || ""}
-                defaultValue=""
               >
                 <SelectTrigger id="status" className="w-full">
                   <SelectValue placeholder="Pilih status" />

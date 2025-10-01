@@ -12,14 +12,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function TambahKaryawanPage() {
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [roleId, setRoleId] = useState<number | undefined>(undefined);
-  const [statusId, setStatusId] = useState<number | undefined>(undefined);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [roleId, setRoleId] = useState<number | undefined>();
+  const [statusId, setStatusId] = useState<number | undefined>();
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,7 +38,13 @@ export default function TambahKaryawanPage() {
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, roleId, statusId }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          roleId,
+          statusId,
+        }),
       });
 
       if (!res.ok) throw new Error("Gagal menambah karyawan");
@@ -62,7 +76,6 @@ export default function TambahKaryawanPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
-            {/* form fields */}
             <div>
               <Label htmlFor="name">Nama</Label>
               <Input
@@ -76,11 +89,34 @@ export default function TambahKaryawanPage() {
             </div>
 
             <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Masukkan email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Masukkan password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
               <Label htmlFor="role">Role</Label>
               <Select
                 onValueChange={(value) => setRoleId(Number(value))}
                 value={roleId?.toString() || ""}
-                defaultValue=""
               >
                 <SelectTrigger id="role" className="w-full">
                   <SelectValue placeholder="Pilih role" />
@@ -98,7 +134,6 @@ export default function TambahKaryawanPage() {
               <Select
                 onValueChange={(value) => setStatusId(Number(value))}
                 value={statusId?.toString() || ""}
-                defaultValue=""
               >
                 <SelectTrigger id="status" className="w-full">
                   <SelectValue placeholder="Pilih status" />
@@ -111,7 +146,7 @@ export default function TambahKaryawanPage() {
             </div>
 
             <Button type="submit" disabled={loading}>
-              {loading ? "Menyimpan..." : "Simpan"}
+              {loading ? "Menambahkan..." : "Tambah"}
             </Button>
           </form>
         </CardContent>
