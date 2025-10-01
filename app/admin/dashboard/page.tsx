@@ -75,25 +75,22 @@ export default function AdminDashboard() {
   // Stats
   const totalKaryawan = users.length;
 
-  const hadirHariIni = absensiHariIni.filter(
-    (a) => (a.status === "Hadir" || a.status === "Pulang") && a.checkIn
-  ).length;
+  const hadirHariIni = absensiHariIni.filter((a) => a.checkIn !== null).length;
 
-  const terlambat = absensiHariIni.filter(
-    (a) =>
-      (a.status === "Hadir" || a.status === "Pulang") &&
-      getMinutes(a.checkIn) !== null &&
-      getMinutes(a.checkIn)! > 9 * 60
-  ).length;
+  const terlambat = absensiHariIni.filter((a) => {
+    if (!a.checkIn) return false;
+    const menit = getMinutes(a.checkIn);
+    return menit !== null && menit > 9 * 60; // lewat jam 9 pagi
+  }).length;
 
-  const absen = absensiHariIni.filter((a) => a.status === "Absen").length;
+  const absen = totalKaryawan - hadirHariIni;
 
   const recentAbsensi = absensiHariIni.slice(0, 5);
 
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -127,17 +124,6 @@ export default function AdminDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Terlambat</CardTitle>
-            <Clock className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{terlambat}</div>
-            <p className="text-xs text-muted-foreground">Karyawan terlambat</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tidak Hadir</CardTitle>
             <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
@@ -160,22 +146,19 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             {recentAbsensi.map((item) => {
               const menit = getMinutes(item.checkIn);
-              let statusLabel = item.status;
-              let variant: "default" | "secondary" | "destructive" = "default";
+              let statusLabel: "Hadir" | "Terlambat" | "Absen" | "Pulang" =
+                "Absen";
+              let variant: "default" | "secondary" | "destructive" =
+                "destructive";
 
-              if (
-                (item.status === "Hadir" || item.status === "Pulang") &&
-                menit !== null
-              ) {
-                if (menit > 9 * 60) {
+              if (item.checkIn) {
+                if (menit !== null && menit > 9 * 60) {
                   statusLabel = "Terlambat";
                   variant = "secondary";
                 } else {
                   statusLabel = "Hadir";
                   variant = "default";
                 }
-              } else if (item.status === "Absen") {
-                variant = "destructive";
               }
 
               return (
