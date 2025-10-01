@@ -73,7 +73,6 @@ export default function AdminDashboard() {
   const absensiHariIni = absences.filter((a) => isToday(a.date));
 
   // Stats
-  // Stats
   const totalKaryawan = users.length;
 
   const hadirHariIni = absensiHariIni.filter(
