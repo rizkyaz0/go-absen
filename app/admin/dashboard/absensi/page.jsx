@@ -1,4 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function AbsensiPage() {
   return (
@@ -9,7 +15,7 @@ export default function AbsensiPage() {
           Kelola dan pantau absensi karyawan
         </p>
       </div>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Rekap Absensi</CardTitle>
