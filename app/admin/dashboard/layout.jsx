@@ -33,7 +33,12 @@ const menuItems = [
   {
     href: '/admin/dashboard/laporan',
     icon: Clock,
-    label: 'Laporan',
+    label: 'Laporan', 
+  },
+  {
+  href: '/admin/dashboard/izin',
+    icon: Activity,
+    label: 'izin',
   },
 ];
 

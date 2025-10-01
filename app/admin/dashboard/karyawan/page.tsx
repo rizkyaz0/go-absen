@@ -8,8 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ActionButton } from "@/components/ActionButton";
 
 interface User {
   id: number;
@@ -31,7 +31,6 @@ export default function KaryawanPage() {
       });
   }, []);
 
-  // Helper untuk mapping roleId & statusId
   const roleMap: Record<number, string> = {
     1: "Project Manager",
     2: "Developer",
@@ -41,6 +40,24 @@ export default function KaryawanPage() {
   const statusMap: Record<number, string> = {
     1: "Active",
     2: "Inactive",
+  };
+
+  const handleAdd = () => {
+    alert("Tambah karyawan");
+    // TODO: navigasi ke halaman tambah atau modal tambah
+  };
+
+  const handleEdit = (id: number) => {
+    alert(`Edit karyawan dengan id: ${id}`);
+    // TODO: navigasi ke halaman edit atau modal edit
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm("Apakah Anda yakin ingin menghapus karyawan ini?")) {
+      alert(`Karyawan dengan id ${id} dihapus (simulasi)`);
+      setUsers((prev) => prev.filter((user) => user.id !== id));
+      // TODO: panggil API hapus data
+    }
   };
 
   return (
@@ -53,10 +70,7 @@ export default function KaryawanPage() {
             Kelola data seluruh karyawan perusahaan
           </p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Tambah Karyawan
-        </Button>
+        <ActionButton variant="add" onClick={handleAdd} />
       </div>
 
       {/* Card */}
@@ -73,30 +87,31 @@ export default function KaryawanPage() {
           ) : users.length === 0 ? (
             <p>Tidak ada karyawan.</p>
           ) : (
-            <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-4 py-2 text-left">ID</th>
-                  <th className="px-4 py-2 text-left">Nama</th>
-                  <th className="px-4 py-2 text-left">Role</th>
-                  <th className="px-4 py-2 text-left">Status</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {users.map((user, index) => (
-                  <tr key={user.id} className="border-t">
-                    <td className="px-4 py-2">{index + 1}</td>
-                    <td className="px-4 py-2 font-medium">{user.name}</td>
-                    <td className="px-4 py-2">
-                      {user.roleId ? roleMap[user.roleId] || "-" : "-"}
-                    </td>
-                    <td className="px-4 py-2">
-                      {user.statusId ? statusMap[user.statusId] || "-" : "-"}
-                    </td>
-                  </tr>
+                  <TableRow key={user.id}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>{user.roleId ? roleMap[user.roleId] || "-" : "-"}</TableCell>
+                    <TableCell>{user.statusId ? statusMap[user.statusId] || "-" : "-"}</TableCell>
+                    <TableCell className="flex space-x-2">
+                      <ActionButton variant="edit" onClick={() => handleEdit(user.id)} />
+                      <ActionButton variant="delete" onClick={() => handleDelete(user.id)} />
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
