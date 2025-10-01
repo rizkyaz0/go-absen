@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ActionButton } from "@/components/ActionButton";
+import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 
 interface User {
   id: number;
@@ -19,8 +21,14 @@ interface User {
 }
 
 export default function KaryawanPage() {
+  const router = useRouter();
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/users")
@@ -42,22 +50,33 @@ export default function KaryawanPage() {
     2: "Inactive",
   };
 
+  // Navigasi ke halaman tambah karyawan
   const handleAdd = () => {
-    alert("Tambah karyawan");
-    // TODO: navigasi ke halaman tambah atau modal tambah
+    router.push("/admin/dashboard/karyawan/tambah");
   };
 
+  // Navigasi ke halaman edit karyawan
   const handleEdit = (id: number) => {
-    alert(`Edit karyawan dengan id: ${id}`);
-    // TODO: navigasi ke halaman edit atau modal edit
+    router.push(`/admin/dashboard/karyawan/edit/${id}`);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("Apakah Anda yakin ingin menghapus karyawan ini?")) {
-      alert(`Karyawan dengan id ${id} dihapus (simulasi)`);
-      setUsers((prev) => prev.filter((user) => user.id !== id));
-      // TODO: panggil API hapus data
-    }
+  // Buka modal hapus
+  const handleDeleteClick = (id: number) => {
+    setSelectedUserId(id);
+    setDeleteModalOpen(true);
+  };
+
+  // Konfirmasi hapus
+  const handleConfirmDelete = () => {
+    if (selectedUserId === null) return;
+
+    // TODO: panggil API hapus user di sini
+    // Contoh:
+    // await fetch(`/api/users/${selectedUserId}`, { method: "DELETE" });
+
+    // Simulasi hapus di UI
+    setUsers((prev) => prev.filter((user) => user.id !== selectedUserId));
+    setSelectedUserId(null);
   };
 
   return (
@@ -106,7 +125,7 @@ export default function KaryawanPage() {
                     <TableCell>{user.statusId ? statusMap[user.statusId] || "-" : "-"}</TableCell>
                     <TableCell className="flex space-x-2">
                       <ActionButton variant="edit" onClick={() => handleEdit(user.id)} />
-                      <ActionButton variant="delete" onClick={() => handleDelete(user.id)} />
+                      <ActionButton variant="delete" onClick={() => handleDeleteClick(user.id)} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -115,6 +134,13 @@ export default function KaryawanPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal konfirmasi hapus */}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
