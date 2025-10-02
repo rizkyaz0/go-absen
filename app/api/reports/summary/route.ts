@@ -3,83 +3,99 @@ import { prisma } from "@/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const url = new URL(req.url);
-    const startDate = url.searchParams.get("startDate");
-    const endDate = url.searchParams.get("endDate");
-    
-    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const end = endDate ? new Date(endDate) : new Date();
+    const { searchParams } = new URL(req.url);
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
-    // Total hari kerja dalam periode
-    const totalHariKerja = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (!startDate || !endDate) {
+      return NextResponse.json({ error: 'Start date and end date are required' }, { status: 400 });
+    }
 
-    // Rata-rata kehadiran
-    const totalAbsences = await prisma.absence.count({
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Include the entire end date
+
+    // Calculate total working days (excluding weekends)
+    let totalWorkingDays = 0;
+    const currentDate = new Date(start);
+    while (currentDate <= end) {
+      const dayOfWeek = currentDate.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday or Saturday
+        totalWorkingDays++;
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Get attendance data
+    const attendanceData = await prisma.absence.findMany({
       where: {
         date: {
           gte: start,
           lte: end
         }
+      },
+      include: {
+        user: true
       }
     });
 
-    const totalHadir = await prisma.absence.count({
+    // Get total employees
+    const totalEmployees = await prisma.user.count({
       where: {
-        date: {
-          gte: start,
-          lte: end
-        },
-        status: "Hadir"
+        status: {
+          name: 'Active'
+        }
       }
     });
 
-    const rataRataKehadiran = totalAbsences > 0 ? (totalHadir / totalAbsences) * 100 : 0;
+    // Calculate attendance statistics
+    const totalPossibleAttendance = totalEmployees * totalWorkingDays;
+    const actualAttendance = attendanceData.filter(a => a.checkIn !== null).length;
+    const averageAttendance = totalPossibleAttendance > 0 
+      ? Math.round((actualAttendance / totalPossibleAttendance) * 100) 
+      : 0;
 
-    // Total terlambat (asumsi terlambat jika checkIn > jam 8:00)
-    const totalTerlambat = await prisma.absence.count({
+    // Count late arrivals (after 9:00 AM)
+    const lateArrivals = attendanceData.filter(a => {
+      if (!a.checkIn) return false;
+      const checkInTime = new Date(a.checkIn);
+      const nineAM = new Date(checkInTime);
+      nineAM.setHours(9, 0, 0, 0);
+      return checkInTime > nineAM;
+    }).length;
+
+    // Get leave request statistics
+    const leaveRequests = await prisma.leaveRequest.findMany({
       where: {
-        date: {
-          gte: start,
-          lte: end
-        },
-        checkIn: {
-          gte: new Date(start.getTime() + 8 * 60 * 60 * 1000) // 8 jam setelah start date
-        },
-        status: "Hadir"
+        OR: [
+          {
+            startDate: { gte: start, lte: end }
+          },
+          {
+            endDate: { gte: start, lte: end }
+          },
+          {
+            startDate: { lte: start },
+            endDate: { gte: end }
+          }
+        ]
       }
     });
 
-    // Izin diterima
-    const izinDiterima = await prisma.leaveRequest.count({
-      where: {
-        startDate: {
-          gte: start,
-          lte: end
-        },
-        status: "Approved"
-      }
-    });
+    const approvedLeaves = leaveRequests.filter(l => l.status === 'Approved').length;
+    const rejectedLeaves = leaveRequests.filter(l => l.status === 'Rejected').length;
 
-    // Izin ditolak
-    const izinDitolak = await prisma.leaveRequest.count({
-      where: {
-        startDate: {
-          gte: start,
-          lte: end
-        },
-        status: "Rejected"
-      }
-    });
+    const summary = {
+      totalHariKerja: totalWorkingDays,
+      rataRataKehadiran: averageAttendance,
+      totalTerlambat: lateArrivals,
+      izinDiterima: approvedLeaves,
+      izinDitolak: rejectedLeaves
+    };
 
-    return NextResponse.json({
-      totalHariKerja,
-      rataRataKehadiran: Math.round(rataRataKehadiran * 100) / 100,
-      totalTerlambat,
-      izinDiterima,
-      izinDitolak
-    });
+    return NextResponse.json(summary);
   } catch (error) {
-    console.error("Error fetching summary:", error);
-    return NextResponse.json({ error: "Failed to fetch summary" }, { status: 500 });
+    console.error('Error generating summary report:', error);
+    return NextResponse.json({ error: 'Failed to generate summary report' }, { status: 500 });
   }
 }

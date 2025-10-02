@@ -19,131 +19,382 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Save, AlertCircle, Loader2 } from "lucide-react";
+
+interface Role {
+  id: number;
+  name: string;
+}
+
+interface Status {
+  id: number;
+  name: string;
+}
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  roleId: number;
+  statusId: number;
+  role?: { id: number; name: string };
+  status?: { id: number; name: string };
+}
+
+interface FormData {
+  name: string;
+  email: string;
+  password: string;
+  roleId: string;
+  statusId: string;
+}
 
 export default function EditKaryawanPage() {
   const router = useRouter();
   const params = useParams();
-  const id = params?.id;
+  const userId = params.id as string;
 
-  const [name, setName] = useState("");
-  const [roleId, setRoleId] = useState<number | undefined>();
-  const [statusId, setStatusId] = useState<number | undefined>();
   const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [statuses, setStatuses] = useState<Status[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    email: "",
+    password: "",
+    roleId: "",
+    statusId: "",
+  });
 
+  // Fetch initial data
   useEffect(() => {
-    if (!id) return;
-
-    const fetchUser = async () => {
-      setLoadingData(true);
+    const fetchData = async () => {
       try {
-        const res = await fetch(`/api/users/${id}`);
-        if (!res.ok) throw new Error("Gagal mengambil data karyawan");
-        const data = await res.json();
-        setName(data.name);
-        setRoleId(data.roleId);
-        setStatusId(data.statusId);
-      } catch (error) {
-        alert((error as Error).message);
+        setInitialLoading(true);
+        const [userRes, rolesRes, statusesRes] = await Promise.all([
+          fetch(`/api/users/${userId}`),
+          fetch("/api/roles"),
+          fetch("/api/statuses")
+        ]);
+
+        if (!userRes.ok) {
+          throw new Error('Karyawan tidak ditemukan');
+        }
+
+        const [userData, rolesData, statusesData] = await Promise.all([
+          userRes.json(),
+          rolesRes.ok ? rolesRes.json() : [],
+          statusesRes.ok ? statusesRes.json() : []
+        ]);
+
+        setUser(userData);
+        setRoles(rolesData);
+        setStatuses(statusesData);
+        
+        // Populate form with existing data
+        setFormData({
+          name: userData.name || "",
+          email: userData.email || "",
+          password: "", // Don't populate password for security
+          roleId: userData.roleId?.toString() || "",
+          statusId: userData.statusId?.toString() || "",
+        });
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError((err as Error).message);
       } finally {
-        setLoadingData(false);
+        setInitialLoading(false);
       }
     };
 
-    fetchUser();
-  }, [id]);
+    if (userId) {
+      fetchData();
+    }
+  }, [userId]);
+
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    // Clear error when user starts typing
+    if (error) setError(null);
+  };
+
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      setError("Nama karyawan harus diisi");
+      return false;
+    }
+    if (!formData.email.trim()) {
+      setError("Email harus diisi");
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setError("Format email tidak valid");
+      return false;
+    }
+    if (formData.password && formData.password.length < 6) {
+      setError("Password minimal 6 karakter");
+      return false;
+    }
+    if (!formData.roleId) {
+      setError("Role harus dipilih");
+      return false;
+    }
+    if (!formData.statusId) {
+      setError("Status harus dipilih");
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id) return;
+    
+    if (!validateForm()) return;
 
     setLoading(true);
+    setError(null);
+
     try {
-      const res = await fetch(`/api/users/${id}`, {
+      const updateData: any = {
+        name: formData.name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        roleId: parseInt(formData.roleId),
+        statusId: parseInt(formData.statusId),
+      };
+
+      // Only include password if it's provided
+      if (formData.password.trim()) {
+        updateData.password = formData.password;
+      }
+
+      const response = await fetch(`/api/users/${userId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, roleId, statusId }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateData),
       });
 
-      if (!res.ok) throw new Error("Gagal memperbarui karyawan");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Gagal mengupdate karyawan");
+      }
 
-      router.push("/admin/dashboard/karyawan");
-    } catch (error) {
-      alert((error as Error).message);
+      setSuccess(true);
+      setTimeout(() => {
+        router.push("/admin/dashboard/karyawan");
+      }, 1500);
+    } catch (err) {
+      console.error('Error updating user:', err);
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loadingData) return <p>Loading data karyawan...</p>;
+  const handleCancel = () => {
+    router.push("/admin/dashboard/karyawan");
+  };
+
+  if (initialLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading data karyawan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user && !initialLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 mb-4">Karyawan tidak ditemukan</p>
+          <Button onClick={handleCancel}>
+            Kembali ke Daftar Karyawan
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h2 className="text-3xl font-bold mb-4">Edit Karyawan</h2>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCancel}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Kembali
+        </Button>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Edit Karyawan</h2>
+          <p className="text-muted-foreground">
+            Edit informasi karyawan: {user?.name}
+          </p>
+        </div>
+      </div>
 
-      <Button
-        variant="outline"
-        className="mb-6"
-        onClick={() => router.push("/admin/dashboard/karyawan")}
-      >
-        Kembali
-      </Button>
+      {/* Success Alert */}
+      {success && (
+        <Alert className="border-green-200 bg-green-50">
+          <AlertCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            Data karyawan berhasil diupdate! Mengalihkan ke daftar karyawan...
+          </AlertDescription>
+        </Alert>
+      )}
 
+      {/* Error Alert */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Form */}
       <Card>
         <CardHeader>
-          <CardTitle>Form Edit Karyawan</CardTitle>
-          <CardDescription>Perbarui data karyawan</CardDescription>
+          <CardTitle>Edit Informasi Karyawan</CardTitle>
+          <CardDescription>
+            Update data karyawan. Kosongkan password jika tidak ingin mengubahnya.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
-            <div>
-              <Label htmlFor="name">Nama</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Masukkan nama karyawan"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Name */}
+              <div className="space-y-2">
+                <Label htmlFor="name">Nama Lengkap *</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Masukkan nama lengkap"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="nama@company.com"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <Label htmlFor="password">Password Baru</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Kosongkan jika tidak ingin mengubah"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimal 6 karakter jika ingin mengubah password
+                </p>
+              </div>
+
+              {/* Role */}
+              <div className="space-y-2">
+                <Label htmlFor="role">Role *</Label>
+                <Select
+                  value={formData.roleId}
+                  onValueChange={(value) => handleInputChange("roleId", value)}
+                  disabled={loading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih role karyawan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((role) => (
+                      <SelectItem key={role.id} value={role.id.toString()}>
+                        {role.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <Label htmlFor="status">Status *</Label>
+                <Select
+                  value={formData.statusId}
+                  onValueChange={(value) => handleInputChange("statusId", value)}
+                  disabled={loading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih status karyawan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statuses.map((status) => (
+                      <SelectItem key={status.id} value={status.id.toString()}>
+                        {status.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="role">Role</Label>
-              <Select
-                onValueChange={(value) => setRoleId(Number(value))}
-                value={roleId?.toString() || ""}
+            {/* Submit Buttons */}
+            <div className="flex justify-end gap-4 pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={loading}
               >
-                <SelectTrigger id="role" className="w-full">
-                  <SelectValue placeholder="Pilih role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Project Manager</SelectItem>
-                  <SelectItem value="2">Developer</SelectItem>
-                  <SelectItem value="3">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select
-                onValueChange={(value) => setStatusId(Number(value))}
-                value={statusId?.toString() || ""}
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
               >
-                <SelectTrigger id="status" className="w-full">
-                  <SelectValue placeholder="Pilih status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Active</SelectItem>
-                  <SelectItem value="2">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Update Karyawan
+                  </>
+                )}
+              </Button>
             </div>
-
-            <Button type="submit" disabled={loading}>
-              {loading ? "Menyimpan..." : "Simpan Perubahan"}
-            </Button>
           </form>
         </CardContent>
       </Card>
