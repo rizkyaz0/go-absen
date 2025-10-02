@@ -4,11 +4,12 @@ import { prisma } from "@/prisma";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = Number(params.id);
+  const { id } = await params;
+  const userId = Number(id);
   const user = await prisma.user.findUnique({
-    where: { id },
+    where: { id: userId },
     select: {
       id: true,
       name: true,
@@ -26,14 +27,15 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = Number(params.id);
+  const { id } = await params;
+  const userId = Number(id);
   const data = await req.json();
 
   try {
     const updatedUser = await prisma.user.update({
-      where: { id },
+      where: { id: userId },
       data: {
         name: data.name,
         roleId: data.roleId,
@@ -51,10 +53,10 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> } // params sebagai Promise
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params; // Await params terlebih dahulu
+    const { id } = await params;
     const userId = Number(id);
 
     // Validasi ID

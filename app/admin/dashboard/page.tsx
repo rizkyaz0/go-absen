@@ -9,7 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Clock, Users } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle, XCircle, Clock, Users, Construction } from "lucide-react";
 
 interface Absence {
   id: number;
@@ -27,7 +28,7 @@ interface User {
   name: string;
   email?: string;
   roleId?: number;
-  statusId?: number;
+  statusI?: number;
 }
 
 export default function AdminDashboard() {
@@ -89,6 +90,14 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Alert untuk status pengembangan */}
+      <Alert>
+        <Construction className="h-4 w-4" />
+        <AlertDescription>
+          Dashboard admin sedang dalam pengembangan. Fitur laporan sudah tersedia dan dapat digunakan.
+        </AlertDescription>
+      </Alert>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
         <Card>

@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/table";
 import { ActionButton } from "@/components/ActionButton";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Construction } from "lucide-react";
 
 interface User {
   id: number;
@@ -104,6 +106,14 @@ export default function KaryawanPage() {
         </div>
         <ActionButton variant="add" onClick={handleAdd} />
       </div>
+
+      {/* Alert untuk fitur dalam pengembangan */}
+      <Alert>
+        <Construction className="h-4 w-4" />
+        <AlertDescription>
+          Fitur ini sedang dalam pengembangan. Beberapa fungsi mungkin belum tersedia.
+        </AlertDescription>
+      </Alert>
 
       {/* Card */}
       <Card>

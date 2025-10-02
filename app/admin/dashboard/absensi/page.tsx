@@ -9,6 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Construction } from "lucide-react";
 
 interface Absence {
   id: number;
@@ -63,6 +65,14 @@ export default function AbsensiPage() {
           Kelola dan pantau absensi karyawan
         </p>
       </div>
+
+      {/* Alert untuk fitur dalam pengembangan */}
+      <Alert>
+        <Construction className="h-4 w-4" />
+        <AlertDescription>
+          Fitur ini sedang dalam pengembangan. Beberapa fungsi mungkin belum tersedia.
+        </AlertDescription>
+      </Alert>
 
       {/* Filter tanggal */}
       <div className="flex items-center gap-4">

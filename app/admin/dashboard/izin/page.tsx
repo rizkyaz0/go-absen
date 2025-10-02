@@ -10,6 +10,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Construction } from "lucide-react";
 
 interface Izin {
   id: number;
@@ -27,7 +29,7 @@ interface Izin {
 }
 
 export default function IzinPage() {
-  const [izinData, setIzinData] = useState<Izin[]>([]);
+  const [izinData,setIzinData] = useState<Izin[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch izin dari API
@@ -67,8 +69,21 @@ export default function IzinPage() {
   if (loading) return <p>Loading izin...</p>;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Daftar Izin</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold mb-4">Daftar Izin</h1>
+        <p className="text-muted-foreground">
+          Kelola permintaan izin dan cuti karyawan
+        </p>
+      </div>
+
+      {/* Alert untuk fitur dalam pengembangan */}
+      <Alert>
+        <Construction className="h-4 w-4" />
+        <AlertDescription>
+          Fitur ini sedang dalam pengembangan. Beberapa fungsi mungkin belum tersedia.
+        </AlertDescription>
+      </Alert>
 
       <Table>
         <TableHeader>
