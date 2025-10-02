@@ -64,10 +64,11 @@ export default function AdminDashboard() {
     );
   };
 
-  const getMinutes = (time?: string | null) => {
-    if (!time) return null;
-    const [h, m] = time.split(":").map(Number);
-    return h * 60 + m;
+  const getMinutesFromISO = (iso?: string | null) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    return d.getHours() * 60 + d.getMinutes();
   };
 
   // Filter absensi hanya untuk hari ini
@@ -80,7 +81,7 @@ export default function AdminDashboard() {
 
   const terlambat = absensiHariIni.filter((a) => {
     if (!a.checkIn) return false;
-    const menit = getMinutes(a.checkIn);
+    const menit = getMinutesFromISO(a.checkIn);
     return menit !== null && menit > 9 * 60; // lewat jam 9 pagi
   }).length;
 
@@ -90,11 +91,11 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Alert untuk status pengembangan */}
+      {/* Info */}
       <Alert>
         <Construction className="h-4 w-4" />
         <AlertDescription>
-          Dashboard admin sedang dalam pengembangan. Fitur laporan sudah tersedia dan dapat digunakan.
+          Ringkasan kehadiran karyawan hari ini.
         </AlertDescription>
       </Alert>
 
@@ -154,7 +155,7 @@ export default function AdminDashboard() {
         <CardContent>
           <div className="space-y-4">
             {recentAbsensi.map((item) => {
-              const menit = getMinutes(item.checkIn);
+              const menit = getMinutesFromISO(item.checkIn);
               let statusLabel: "Hadir" | "Terlambat" | "Absen" | "Pulang" =
                 "Absen";
               let variant: "default" | "secondary" | "destructive" =

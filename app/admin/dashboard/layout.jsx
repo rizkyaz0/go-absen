@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import {
   Activity,
@@ -45,6 +45,14 @@ const menuItems = [
 export default function AdminLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', { method: 'POST' });
+    } catch {}
+    router.push('/login');
+  };
 
   return (
     <div className="flex h-screen bg-gray-50/40">
@@ -104,7 +112,7 @@ export default function AdminLayout({ children }) {
 
         {/* Logout Button */}
         <div className="p-4">
-          <Button variant="outline" className="w-full justify-start">
+          <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
             <LogOut className="w-4 h-4" />
             {isSidebarOpen && <span className="ml-2">Logout</span>}
           </Button>

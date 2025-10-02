@@ -4,9 +4,9 @@ import { prisma } from "@/prisma";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params; // id izin
+  const { id } = params; // id izin
   const data = await req.json();
   const status = data.status; // harus "Approved" atau "Rejected"
 

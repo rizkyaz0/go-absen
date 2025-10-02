@@ -77,11 +77,11 @@ export default function IzinPage() {
         </p>
       </div>
 
-      {/* Alert untuk fitur dalam pengembangan */}
+      {/* Info */}
       <Alert>
         <Construction className="h-4 w-4" />
         <AlertDescription>
-          Fitur ini sedang dalam pengembangan. Beberapa fungsi mungkin belum tersedia.
+          Klik Setujui/Tolak untuk memperbarui status izin.
         </AlertDescription>
       </Alert>
 

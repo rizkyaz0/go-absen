@@ -16,9 +16,9 @@ interface Absence {
   id: number;
   user: { id: number; name: string };
   shiftId?: number | null;
-  date: string; // format: YYYY-MM-DD
-  checkIn?: string | null; // format: HH:MM:SS
-  checkOut?: string | null; // format: HH:MM:SS
+  date: string; // ISO string
+  checkIn?: string | null; // ISO string
+  checkOut?: string | null; // ISO string
   status: "Hadir" | "Absen" | "Pulang";
   note?: string;
 }
@@ -42,19 +42,22 @@ export default function AbsensiPage() {
   // Format tanggal DD/MM/YYYY
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return "-";
-    const [year, month, day] = dateStr.slice(0, 10).split("-");
-    return `${day}/${month}/${year}`;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "-";
+    return d.toLocaleDateString("id-ID");
   };
 
   // Format jam HH:MM:SS
   const formatTime = (timeStr?: string | null) => {
     if (!timeStr) return "-";
-    return timeStr.slice(11, 19); // ambil jam:menit:detik
+    const d = new Date(timeStr);
+    if (isNaN(d.getTime())) return "-";
+    return d.toLocaleTimeString("id-ID", { hour12: false });
   };
 
   // Filter berdasarkan tanggal
   const filteredAbsences = filterDate
-    ? absences.filter((a) => a.date.slice(0, 10) === filterDate)
+    ? absences.filter((a) => new Date(a.date).toISOString().slice(0, 10) === filterDate)
     : absences;
 
   return (

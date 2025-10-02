@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Halaman yang bisa diakses user selain roleId 1
-const allowedForNonAdmin = ["/dashboard"];
+// Halaman yang bisa diakses user non-admin
+const allowedForNonAdmin = ["/dashboard", "/api/me", "/api/stats", "/api/stats/kehadiran", "/api/stats/cuti"];
 // Halaman yang tidak perlu middleware
-const publicPaths = ["/login", "/register"];
+const publicPaths = ["/login", "/register", "/api/login", "/api/logout"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -21,8 +21,13 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Kalau roleId bukan 1 → hanya boleh akses halaman tertentu
-  if (roleId !== "3" && !allowedForNonAdmin.includes(pathname)) {
+  // Admin roleId = 3
+  if (roleId === "3") {
+    return NextResponse.next();
+  }
+
+  // Non-admin hanya boleh akses path tertentu
+  if (!allowedForNonAdmin.some((p) => pathname.startsWith(p))) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 

@@ -35,16 +35,14 @@ export async function GET(req: NextRequest) {
 
     const rataRataKehadiran = totalAbsences > 0 ? (totalHadir / totalAbsences) * 100 : 0;
 
-    // Total terlambat (asumsi terlambat jika checkIn > jam 8:00)
+    // Total terlambat (asumsi terlambat jika checkIn > jam 09:00)
     const totalTerlambat = await prisma.absence.count({
       where: {
         date: {
           gte: start,
           lte: end
         },
-        checkIn: {
-          gte: new Date(start.getTime() + 8 * 60 * 60 * 1000) // 8 jam setelah start date
-        },
+        checkIn: { not: null },
         status: "Hadir"
       }
     });

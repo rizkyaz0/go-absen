@@ -35,9 +35,7 @@ export async function GET(req: NextRequest) {
             gte: dayStart,
             lte: dayEnd
           },
-          checkIn: {
-            gte: new Date(dayStart.getTime() + 8 * 60 * 60 * 1000)
-          },
+          checkIn: { not: null },
           status: "Hadir"
         }
       });

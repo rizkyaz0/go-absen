@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/prisma";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
@@ -21,7 +22,25 @@ export async function POST(req: Request) {
       );
     }
 
-    if (user.password !== password) {
+    let passwordValid = false;
+    try {
+      // Jika sudah di-hash
+      if (user.password.startsWith("$2")) {
+        passwordValid = await bcrypt.compare(password, user.password);
+      } else {
+        // Fallback untuk data lama (plaintext)
+        passwordValid = user.password === password;
+        if (passwordValid) {
+          // Migrasi: hash dan simpan ulang secara transparan
+          const newHash = await bcrypt.hash(password, 10);
+          await prisma.user.update({ where: { id: user.id }, data: { password: newHash } });
+        }
+      }
+    } catch {
+      passwordValid = false;
+    }
+
+    if (!passwordValid) {
       return NextResponse.json({ error: "Password salah" }, { status: 401 });
     }
 
