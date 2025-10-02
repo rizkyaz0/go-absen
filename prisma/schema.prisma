@@ -1,5 +1,5 @@
 datasource db {
-  provider = "sqlite"
+  provider = "mysql" // Sesuaikan dengan database Anda: mysql, postgresql, sqlite
   url      = env("DATABASE_URL")
 }
 
