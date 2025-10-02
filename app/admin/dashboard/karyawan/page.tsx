@@ -21,6 +21,8 @@ import { ActionButton } from "@/components/ActionButton";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Construction } from "lucide-react";
+import { notifications } from "@/lib/notifications";
+import { TableLoading } from "@/components/LoadingSpinner";
 
 interface User {
   id: number;
@@ -79,6 +81,8 @@ export default function KaryawanPage() {
   const handleConfirmDelete = async () => {
     if (selectedUserId === null) return;
 
+    const loadingToast = notifications.loading("Menghapus karyawan...");
+
     try {
       const res = await fetch(`/api/users/${selectedUserId}`, {
         method: "DELETE",
@@ -89,8 +93,9 @@ export default function KaryawanPage() {
       setUsers((prev) => prev.filter((user) => user.id !== selectedUserId));
       setSelectedUserId(null);
       setDeleteModalOpen(false);
+      notifications.data.deleteSuccess();
     } catch (error) {
-      alert((error as Error).message);
+      notifications.data.deleteError();
     }
   };
 
@@ -125,9 +130,11 @@ export default function KaryawanPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p>Loading...</p>
+            <TableLoading rows={5} />
           ) : users.length === 0 ? (
-            <p>Tidak ada karyawan.</p>
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Tidak ada karyawan yang terdaftar.</p>
+            </div>
           ) : (
             <Table>
               <TableHeader>

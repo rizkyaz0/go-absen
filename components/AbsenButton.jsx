@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { notifications } from "@/lib/notifications";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export default function AbsenButton() {
   const [sudahMasuk, setSudahMasuk] = useState(false);
@@ -115,11 +117,11 @@ export default function AbsenButton() {
       const data = await res.json();
       setAbsenceId(data.id);
       setSudahMasuk(true);
-      alert("✅ Absen Masuk Berhasil!");
+      notifications.attendance.checkInSuccess();
       window.location.reload();
     } catch (err) {
       console.error(err);
-      alert("❌ Absen Masuk Gagal");
+      notifications.attendance.checkInError();
     }
   };
 
@@ -138,7 +140,7 @@ export default function AbsenButton() {
     );
 
     if (nowWIB < jamPulangDate) {
-      alert(`⏱ Tidak bisa absen pulang sebelum jam ${jamPulang}:00 WIB`);
+      notifications.attendance.tooEarly(`${jamPulang}:00`);
       return;
     }
 
@@ -157,46 +159,59 @@ export default function AbsenButton() {
       if (!res.ok) throw new Error("Gagal absen pulang");
 
       setSudahPulang(true);
-      alert("✅ Absen Pulang Berhasil!");
+      notifications.attendance.checkOutSuccess();
     } catch (err) {
       console.error(err);
-      alert("❌ Absen Pulang Gagal");
+      notifications.attendance.checkOutError();
     }
   };
 
-  if (loading) return <p className="text-center mt-5">Loading...</p>;
+  if (loading) return (
+    <div className="flex justify-center py-8">
+      <LoadingSpinner text="Memuat data absensi..." />
+    </div>
+  );
 
   return (
-    <div className="flex flex-col gap-6 items-center w-full">
-      <div className="text-center">
-        <p className="text-lg font-semibold">{tanggalDisplay}</p>
-        <p className="text-3xl font-bold">{jamDisplay} WIB</p>
+    <div className="flex flex-col gap-6 items-center w-full max-w-md mx-auto">
+      {/* Clock Display */}
+      <div className="text-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-2xl p-6 w-full shadow-sm">
+        <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
+          {tanggalDisplay}
+        </p>
+        <p className="text-3xl font-bold text-slate-800 dark:text-white font-mono">
+          {jamDisplay}
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">WIB</p>
       </div>
 
       {/* Tombol Absen Masuk */}
       {!sudahMasuk && !sudahPulang && (
         <Button
           onClick={handleAbsenMasuk}
-          className="w-full py-5 bg-gradient-to-r from-blue-500 to-cyan-400 text-lg shadow-lg sm:w-auto"
+          className="w-full py-4 px-8 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl"
         >
-          Absen Masuk
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+            Absen Masuk
+          </div>
         </Button>
       )}
 
       {/* Tombol Absen Pulang */}
       {sudahMasuk && !sudahPulang && (
-        <>
-          <div className="w-full text-center">
-            <label className="text-sm text-gray-400 block mb-1">
+        <div className="w-full space-y-4">
+          <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-xl p-4">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">
               Pilih Jam Pulang
             </label>
             <select
               value={jamPulang}
               onChange={(e) => setJamPulang(Number(e.target.value))}
-              className="w-full p-2 rounded-md bg-white/5 text-white border border-white/10 sm:w-auto"
+              className="w-full p-3 rounded-lg bg-white dark:bg-slate-600 text-slate-800 dark:text-white border border-slate-300 dark:border-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             >
               {[16, 17, 18, 19].map((jam) => (
-                <option key={jam} className="text-black" value={jam}>
+                <option key={jam} value={jam}>
                   {jam}:00
                 </option>
               ))}
@@ -205,18 +220,27 @@ export default function AbsenButton() {
 
           <Button
             onClick={handleAbsenPulang}
-            className="w-full py-5 bg-gradient-to-r from-pink-500 to-purple-400 text-lg shadow-lg sm:w-auto"
+            className="w-full py-4 px-8 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl"
           >
-            Absen Pulang
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+              Absen Pulang
+            </div>
           </Button>
-        </>
+        </div>
       )}
 
       {/* Status Absen */}
       {sudahMasuk && sudahPulang && (
-        <p className="text-green-500 font-semibold mt-3">
-          Anda sudah selesai absen hari ini ✅
-        </p>
+        <div className="w-full bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-700 rounded-xl p-4 text-center">
+          <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-300">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="font-semibold">Absensi Hari Ini Selesai</span>
+          </div>
+          <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+            Terima kasih atas kerja keras Anda! ✨
+          </p>
+        </div>
       )}
     </div>
   );

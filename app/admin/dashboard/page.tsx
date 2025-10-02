@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, XCircle, Clock, Users, Construction } from "lucide-react";
+import { CardLoading } from "@/components/LoadingSpinner";
 
 interface Absence {
   id: number;
@@ -51,7 +52,16 @@ export default function AdminDashboard() {
       });
   }, []);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
+        <CardLoading />
+        <CardLoading />
+        <CardLoading />
+      </div>
+      <CardLoading />
+    </div>
+  );
 
   // Helpers
   const isToday = (dateStr: string) => {

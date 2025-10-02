@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { notifications } from "@/lib/notifications";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,6 +12,9 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setMessage(""); // Clear previous messages
+
+    const loadingToast = notifications.loading("Sedang login...");
 
     try {
       const res = await fetch("/api/login", {
@@ -21,13 +25,17 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (!res.ok) {
+        notifications.auth.loginError(data.error);
         setMessage(data.error || "Login gagal");
         return;
       }
 
+      notifications.auth.loginSuccess();
       router.push(data.redirectUrl);
     } catch (err) {
-      setMessage("Terjadi error");
+      const errorMessage = "Terjadi kesalahan koneksi";
+      notifications.auth.loginError(errorMessage);
+      setMessage(errorMessage);
     }
   };
 

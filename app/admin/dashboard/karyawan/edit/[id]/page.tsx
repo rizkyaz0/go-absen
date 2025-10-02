@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { notifications } from "@/lib/notifications";
 import {
   Select,
   SelectContent,
@@ -44,7 +45,7 @@ export default function EditKaryawanPage() {
         setRoleId(data.roleId);
         setStatusId(data.statusId);
       } catch (error) {
-        alert((error as Error).message);
+        notifications.error('Gagal memuat data karyawan', (error as Error).message);
       } finally {
         setLoadingData(false);
       }
@@ -67,9 +68,10 @@ export default function EditKaryawanPage() {
 
       if (!res.ok) throw new Error("Gagal memperbarui karyawan");
 
+      notifications.success('Karyawan berhasil diperbarui', 'Data karyawan telah disimpan');
       router.push("/admin/dashboard/karyawan");
     } catch (error) {
-      alert((error as Error).message);
+      notifications.error('Gagal memperbarui karyawan', (error as Error).message);
     } finally {
       setLoading(false);
     }

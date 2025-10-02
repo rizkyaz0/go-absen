@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Construction } from "lucide-react";
+import { notifications } from "@/lib/notifications";
 
 interface Izin {
   id: number;
@@ -61,8 +62,9 @@ export default function IzinPage() {
       setIzinData((prev) =>
         prev.map((item) => (item.id === id ? { ...item, status } : item))
       );
+      notifications.success('Status izin berhasil diperbarui', `Izin telah ${status.toLowerCase()}`);
     } catch (err) {
-      alert((err as Error).message);
+      notifications.error('Gagal memperbarui status izin', (err as Error).message);
     }
   };
 

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { notifications } from "@/lib/notifications";
 import { 
   Calendar, 
   Download, 
@@ -183,9 +184,10 @@ export default function LaporanPage() {
       }
 
       pdf.save(`laporan-absensi-${new Date().toISOString().split('T')[0]}.pdf`);
+      notifications.success('PDF berhasil diunduh', 'File laporan telah disimpan');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Gagal membuat PDF. Silakan coba lagi.');
+      notifications.error('Gagal membuat PDF', 'Silakan coba lagi atau hubungi admin');
     }
   };
 
@@ -244,9 +246,10 @@ export default function LaporanPage() {
       });
 
       XLSX.writeFile(workbook, `laporan-absensi-${new Date().toISOString().split('T')[0]}.xlsx`);
+      notifications.success('Excel berhasil diunduh', 'File laporan telah disimpan');
     } catch (error) {
       console.error('Error generating Excel:', error);
-      alert('Gagal membuat Excel. Silakan coba lagi.');
+      notifications.error('Gagal membuat Excel', 'Silakan coba lagi atau hubungi admin');
     }
   };
 

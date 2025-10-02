@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { notifications } from "@/lib/notifications";
 import {
   Select,
   SelectContent,
@@ -49,9 +50,10 @@ export default function TambahKaryawanPage() {
 
       if (!res.ok) throw new Error("Gagal menambah karyawan");
 
+      notifications.success('Karyawan berhasil ditambahkan', 'Data karyawan baru telah disimpan');
       router.push("/admin/dashboard/karyawan");
     } catch (error) {
-      alert((error as Error).message);
+      notifications.error('Gagal menambahkan karyawan', (error as Error).message);
     } finally {
       setLoading(false);
     }
