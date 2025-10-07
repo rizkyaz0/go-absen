@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { getCurrentUser, getAbsencesByUser, createAbsence, updateAbsence } from "@/lib/actions";
 
 export default function AbsenButton() {
   const [sudahMasuk, setSudahMasuk] = useState(false);
@@ -18,11 +19,13 @@ export default function AbsenButton() {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await fetch("/api/me");
-        if (!res.ok) throw new Error("Gagal fetch user");
-        const data = await res.json();
-        setUserId(data.id);
-        setShiftId(data.shiftId || 1);
+        const result = await getCurrentUser();
+        if (result.error) {
+          console.error(result.error);
+          return;
+        }
+        setUserId(result.id);
+        setShiftId(result.shiftId || 1);
       } catch (err) {
         console.error(err);
       }
@@ -45,9 +48,13 @@ export default function AbsenButton() {
     async function fetchTodayAbsence() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/absences?userId=${userId}`);
-        if (!res.ok) throw new Error("Gagal fetch absensi");
-        const absences = await res.json();
+        const result = await getAbsencesByUser(userId);
+        if (result.error) {
+          console.error(result.error);
+          return;
+        }
+        
+        const absences = result.data;
         const todayUTC7 = new Date(new Date().getTime() + 7 * 60 * 60 * 1000)
           .toISOString()
           .slice(0, 10);
@@ -97,23 +104,22 @@ export default function AbsenButton() {
       const checkInTime = new Date();
       const checkInUTC7 = new Date(checkInTime.getTime() + 7 * 60 * 60 * 1000);
 
-      const res = await fetch("/api/absences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          shiftId,
-          date: checkInUTC7.toISOString(),
-          checkIn: checkInUTC7.toISOString(),
-          status: "Hadir",
-          location,
-          note: "Datang tepat waktu",
-        }),
+      const result = await createAbsence({
+        userId,
+        shiftId,
+        date: checkInUTC7.toISOString(),
+        checkIn: checkInUTC7.toISOString(),
+        status: "Hadir",
+        location,
+        note: "Datang tepat waktu",
       });
 
-      if (!res.ok) throw new Error("Gagal absen masuk");
-      const data = await res.json();
-      setAbsenceId(data.id);
+      if (result.error) {
+        alert("❌ Absen Masuk Gagal: " + result.error);
+        return;
+      }
+
+      setAbsenceId(result.data.id);
       setSudahMasuk(true);
       alert("✅ Absen Masuk Berhasil!");
       window.location.reload();
@@ -143,18 +149,16 @@ export default function AbsenButton() {
     }
 
     try {
-      const res = await fetch("/api/absences", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: absenceId,
-          checkOut: nowWIB.toISOString(),
-          status: "Pulang",
-          note: "Pulang sesuai jadwal",
-        }),
+      const result = await updateAbsence(absenceId, {
+        checkOut: nowWIB.toISOString(),
+        status: "Pulang",
+        note: "Pulang sesuai jadwal",
       });
 
-      if (!res.ok) throw new Error("Gagal absen pulang");
+      if (result.error) {
+        alert("❌ Absen Pulang Gagal: " + result.error);
+        return;
+      }
 
       setSudahPulang(true);
       alert("✅ Absen Pulang Berhasil!");

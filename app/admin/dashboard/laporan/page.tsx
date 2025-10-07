@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+// import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Calendar, 
   Download, 
@@ -21,11 +21,17 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Construction
+  // Construction
 } from "lucide-react";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
+import { 
+  getSummaryReport, 
+  getMonthlyReport, 
+  getLateEmployeesReport, 
+  getDailyReport 
+} from '@/lib/actions';
 
 interface SummaryData {
   totalHariKerja: number;
@@ -80,9 +86,10 @@ export default function LaporanPage() {
   // Fetch data functions
   const fetchSummaryData = async () => {
     try {
-      const response = await fetch(`/api/reports/summary?startDate=${filterTanggal.dari}&endDate=${filterTanggal.hingga}`);
-      const data = await response.json();
-      setSummaryData(data);
+      const result = await getSummaryReport(filterTanggal.dari, filterTanggal.hingga);
+      if (result.success) {
+        setSummaryData(result.data);
+      }
     } catch (error) {
       console.error('Error fetching summary data:', error);
     }
@@ -91,9 +98,10 @@ export default function LaporanPage() {
   const fetchMonthlyData = async () => {
     try {
       const year = new Date(filterTanggal.dari).getFullYear();
-      const response = await fetch(`/api/reports/monthly?year=${year}`);
-      const data = await response.json();
-      setMonthlyData(Array.isArray(data) ? data : []);
+      const result = await getMonthlyReport(year);
+      if (result.success) {
+        setMonthlyData(Array.isArray(result.data) ? result.data : []);
+      }
     } catch (error) {
       console.error('Error fetching monthly data:', error);
       setMonthlyData([]);
@@ -102,9 +110,10 @@ export default function LaporanPage() {
 
   const fetchLateEmployees = async () => {
     try {
-      const response = await fetch(`/api/reports/late-employees?startDate=${filterTanggal.dari}&endDate=${filterTanggal.hingga}&limit=10`);
-      const data = await response.json();
-      setLateEmployees(Array.isArray(data) ? data : []);
+      const result = await getLateEmployeesReport(filterTanggal.dari, filterTanggal.hingga, 10);
+      if (result.success) {
+        setLateEmployees(Array.isArray(result.data) ? result.data : []);
+      }
     } catch (error) {
       console.error('Error fetching late employees:', error);
       setLateEmployees([]);
@@ -113,9 +122,10 @@ export default function LaporanPage() {
 
   const fetchDailyData = async () => {
     try {
-      const response = await fetch(`/api/reports/daily?startDate=${filterTanggal.dari}&endDate=${filterTanggal.hingga}&limit=7`);
-      const data = await response.json();
-      setDailyData(Array.isArray(data) ? data : []);
+      const result = await getDailyReport(filterTanggal.dari, filterTanggal.hingga, 7);
+      if (result.success) {
+        setDailyData(Array.isArray(result.data) ? result.data : []);
+      }
     } catch (error) {
       console.error('Error fetching daily data:', error);
       setDailyData([]);
@@ -138,7 +148,8 @@ export default function LaporanPage() {
 
   useEffect(() => {
     fetchAllData();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterTanggal.dari, filterTanggal.hingga]);
 
   const handleFilter = async () => {
     await fetchAllData();

@@ -21,6 +21,7 @@ import { ActionButton } from "@/components/ActionButton";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Construction } from "lucide-react";
+import { getAllUsers, deleteUser } from "@/lib/actions";
 
 interface User {
   id: number;
@@ -40,12 +41,20 @@ export default function KaryawanPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch("/api/users")
-      .then((res) => res.json())
-      .then((data: User[]) => {
-        setUsers(data);
+    async function fetchUsers() {
+      try {
+        const result = await getAllUsers();
+        if (result.success) {
+          setUsers(result.data);
+        }
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      } finally {
         setLoading(false);
-      });
+      }
+    }
+
+    fetchUsers();
   }, []);
 
   const roleMap: Record<number, string> = {
@@ -80,10 +89,11 @@ export default function KaryawanPage() {
     if (selectedUserId === null) return;
 
     try {
-      const res = await fetch(`/api/users/${selectedUserId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Gagal menghapus user");
+      const result = await deleteUser(selectedUserId);
+      if (result.error) {
+        alert("Gagal menghapus user: " + result.error);
+        return;
+      }
 
       // Hapus di UI setelah berhasil
       setUsers((prev) => prev.filter((user) => user.id !== selectedUserId));

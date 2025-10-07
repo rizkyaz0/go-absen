@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getUserById, updateUser } from "@/lib/actions";
 
 export default function EditKaryawanPage() {
   const router = useRouter();
@@ -37,9 +38,13 @@ export default function EditKaryawanPage() {
     const fetchUser = async () => {
       setLoadingData(true);
       try {
-        const res = await fetch(`/api/users/${id}`);
-        if (!res.ok) throw new Error("Gagal mengambil data karyawan");
-        const data = await res.json();
+        const result = await getUserById(Number(id));
+        if (result.error) {
+          alert("Gagal mengambil data karyawan: " + result.error);
+          return;
+        }
+        
+        const data = result.data;
         setName(data.name);
         setRoleId(data.roleId);
         setStatusId(data.statusId);
@@ -59,13 +64,16 @@ export default function EditKaryawanPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/users/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, roleId, statusId }),
+      const result = await updateUser(Number(id), {
+        name,
+        roleId: roleId!,
+        statusId: statusId!,
       });
 
-      if (!res.ok) throw new Error("Gagal memperbarui karyawan");
+      if (result.error) {
+        alert("Gagal memperbarui karyawan: " + result.error);
+        return;
+      }
 
       router.push("/admin/dashboard/karyawan");
     } catch (error) {

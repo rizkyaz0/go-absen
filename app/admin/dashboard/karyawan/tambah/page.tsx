@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { createUser } from "@/lib/actions";
 
 export default function TambahKaryawanPage() {
   const router = useRouter();
@@ -35,19 +36,18 @@ export default function TambahKaryawanPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          roleId,
-          statusId,
-        }),
+      const result = await createUser({
+        name,
+        email,
+        password,
+        roleId: roleId!,
+        statusId: statusId!,
       });
 
-      if (!res.ok) throw new Error("Gagal menambah karyawan");
+      if (result.error) {
+        alert("Gagal menambah karyawan: " + result.error);
+        return;
+      }
 
       router.push("/admin/dashboard/karyawan");
     } catch (error) {

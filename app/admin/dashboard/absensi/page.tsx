@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Construction } from "lucide-react";
+import { getAllAbsences } from "@/lib/actions";
 
 interface Absence {
   id: number;
@@ -29,12 +30,20 @@ export default function AbsensiPage() {
   const [filterDate, setFilterDate] = useState<string>(""); // yyyy-mm-dd
 
   useEffect(() => {
-    fetch("/api/absences")
-      .then((res) => res.json())
-      .then((data: Absence[]) => {
-        setAbsences(data);
+    async function fetchAbsences() {
+      try {
+        const result = await getAllAbsences();
+        if (result.success) {
+          setAbsences(result.data);
+        }
+      } catch (err) {
+        console.error("Error fetching absences:", err);
+      } finally {
         setLoading(false);
-      });
+      }
+    }
+
+    fetchAbsences();
   }, []);
 
   if (loading) return <div>Loading...</div>;

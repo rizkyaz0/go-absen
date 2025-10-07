@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, Clock, Users, Construction } from "lucide-react";
+import { CheckCircle, XCircle, Users, Construction } from "lucide-react";
+import { getAllUsers, getAllAbsences } from "@/lib/actions";
 
 interface Absence {
   id: number;
@@ -37,18 +38,27 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch users
-    fetch("/api/users")
-      .then((res) => res.json())
-      .then((data: User[]) => setUsers(data));
+    async function fetchData() {
+      try {
+        // Fetch users
+        const usersResult = await getAllUsers();
+        if (usersResult.success) {
+          setUsers(usersResult.data);
+        }
 
-    // Fetch absences
-    fetch("/api/absences")
-      .then((res) => res.json())
-      .then((data: Absence[]) => {
-        setAbsences(data);
+        // Fetch absences
+        const absencesResult = await getAllAbsences();
+        if (absencesResult.success) {
+          setAbsences(absencesResult.data);
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      } finally {
         setLoading(false);
-      });
+      }
+    }
+
+    fetchData();
   }, []);
 
   if (loading) return <div>Loading...</div>;
@@ -78,11 +88,11 @@ export default function AdminDashboard() {
 
   const hadirHariIni = absensiHariIni.filter((a) => a.checkIn !== null).length;
 
-  const terlambat = absensiHariIni.filter((a) => {
-    if (!a.checkIn) return false;
-    const menit = getMinutes(a.checkIn);
-    return menit !== null && menit > 9 * 60; // lewat jam 9 pagi
-  }).length;
+  // const terlambat = absensiHariIni.filter((a) => {
+  //   if (!a.checkIn) return false;
+  //   const menit = getMinutes(a.checkIn);
+  //   return menit !== null && menit > 9 * 60; // lewat jam 9 pagi
+  // }).length;
 
   const absen = totalKaryawan - hadirHariIni;
 

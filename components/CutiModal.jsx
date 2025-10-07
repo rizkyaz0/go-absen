@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Home } from "lucide-react";
+import { getCurrentUser, createLeaveRequest } from "@/lib/actions";
 
 export default function CutiModal() {
   const [tanggalMulai, setTanggalMulai] = useState("");
@@ -24,10 +25,12 @@ export default function CutiModal() {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await fetch("/api/me");
-        if (!res.ok) throw new Error("Gagal ambil user");
-        const data = await res.json();
-        setUserId(data.id);
+        const result = await getCurrentUser();
+        if (result.error) {
+          console.error(result.error);
+          return;
+        }
+        setUserId(result.id);
       } catch (err) {
         console.error(err);
       }
@@ -43,20 +46,18 @@ export default function CutiModal() {
     }
 
     try {
-      const res = await fetch("/api/leave", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          startDate: tanggalMulai,
-          endDate: tanggalAkhir,
-          type: "Cuti",
-          status: "Pending",
-          reason: alasan,
-        }),
+      const result = await createLeaveRequest({
+        userId,
+        startDate: tanggalMulai,
+        endDate: tanggalAkhir,
+        type: "Cuti",
+        reason: alasan,
       });
 
-      if (!res.ok) throw new Error("Gagal ajukan cuti");
+      if (result.error) {
+        alert("❌ Gagal ajukan cuti: " + result.error);
+        return;
+      }
 
       alert("✅ Pengajuan cuti berhasil!");
       setTanggalMulai("");

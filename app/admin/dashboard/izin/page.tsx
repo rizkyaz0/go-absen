@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Construction } from "lucide-react";
+import { getAllLeaveRequests, updateLeaveRequestStatus } from "@/lib/actions";
 
 interface Izin {
   id: number;
@@ -36,9 +37,10 @@ export default function IzinPage() {
   useEffect(() => {
     const fetchIzin = async () => {
       try {
-        const res = await fetch("/api/leave");
-        const data: Izin[] = await res.json();
-        setIzinData(data);
+        const result = await getAllLeaveRequests();
+        if (result.success) {
+          setIzinData(result.data);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -51,12 +53,11 @@ export default function IzinPage() {
   // Update status izin (Approve / Reject)
   const updateStatus = async (id: number, status: "Approved" | "Rejected") => {
     try {
-      const res = await fetch(`/api/leave/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) throw new Error("Gagal update status izin");
+      const result = await updateLeaveRequestStatus(id, status);
+      if (result.error) {
+        alert("Gagal update status izin: " + result.error);
+        return;
+      }
 
       setIzinData((prev) =>
         prev.map((item) => (item.id === id ? { ...item, status } : item))

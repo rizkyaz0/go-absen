@@ -5,8 +5,9 @@ import { motion } from "framer-motion";
 import { CalendarDays } from "lucide-react";
 import AbsenButton from "@/components/AbsenButton";
 import CutiModal from "@/components/CutiModal";
-import StatCard from "@/components/StatCard";
+import StatCardServer from "@/components/StatCardServer";
 import Loading from "./loading";
+import { getCurrentUser, getAttendanceStats, getLeaveStats } from "@/lib/actions";
 
 export default function KaryawanDashboard() {
   const [user, setUser] = useState({ id: null, name: "" });
@@ -14,10 +15,12 @@ export default function KaryawanDashboard() {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await fetch("/api/me");
-        if (!res.ok) throw new Error("Gagal ambil user");
-        const data = await res.json();
-        setUser(data);
+        const result = await getCurrentUser();
+        if (result.error) {
+          console.error(result.error);
+          return;
+        }
+        setUser(result);
       } catch (err) {
         console.error(err);
       }
@@ -56,20 +59,20 @@ export default function KaryawanDashboard() {
       {/* Statistik singkat */}
       <div className="flex justify-center mt-10">
         <div className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full max-w-4xl">
-          <StatCard
+          <StatCardServer
             title="Kehadiran"
             icon={CalendarDays}
             subtitle="Bulan ini"
-            apiEndpoint={`/api/stats/kehadiran?userId=${user.id}`}
+            serverAction={() => getAttendanceStats(user.id || 0)}
             field="value"
           />
 
-          <StatCard
-            title="Sisa Cuti"
+          <StatCardServer
+            title="Total Cuti"
             icon={CalendarDays}
             subtitle="Bulan ini"
-            apiEndpoint={`/api/stats/cuti?userId=${user.id}`}
-            field="value"
+            serverAction={() => getLeaveStats()}
+            field="totalCuti"
           />
         </div>
       </div>
