@@ -9,8 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Construction } from "lucide-react";
+// import { Alert, AlertDescription } from "@/components/ui/alert";
+// import { Construction } from "lucide-react";
 import { getAllAbsences } from "@/lib/actions";
 
 interface Absence {
@@ -48,22 +48,37 @@ export default function AbsensiPage() {
 
   if (loading) return <div>Loading...</div>;
 
-  // Format tanggal DD/MM/YYYY
-  const formatDate = (dateStr?: string | null) => {
-    if (!dateStr) return "-";
-    const [year, month, day] = dateStr.slice(0, 10).split("-");
+  // Safe date formatter - handles Date, string, number, null, undefined
+  const formatDate = (date?: string | Date | number | null) => {
+    if (!date) return "-";
+    const d = date instanceof Date ? date : new Date(date as string | number);
+    if (Number.isNaN(d.getTime())) return "-";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
     return `${day}/${month}/${year}`;
   };
 
-  // Format jam HH:MM:SS
-  const formatTime = (timeStr?: string | null) => {
-    if (!timeStr) return "-";
-    return timeStr.slice(11, 19); // ambil jam:menit:detik
+  // Safe time formatter - handles Date, string, null, undefined
+  const formatTime = (time?: string | Date | null) => {
+    if (!time) return "-";
+    const d = time instanceof Date ? time : new Date(time);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: "Asia/Jakarta"
+    });
   };
 
-  // Filter berdasarkan tanggal
+  // Filter berdasarkan tanggal - safe date comparison
   const filteredAbsences = filterDate
-    ? absences.filter((a) => a.date.slice(0, 10) === filterDate)
+    ? absences.filter((a) => {
+        const absenceDate = new Date(a.date);
+        const filterDateObj = new Date(filterDate);
+        return absenceDate.toISOString().slice(0, 10) === filterDateObj.toISOString().slice(0, 10);
+      })
     : absences;
 
   return (
@@ -75,13 +90,7 @@ export default function AbsensiPage() {
         </p>
       </div>
 
-      {/* Alert untuk fitur dalam pengembangan */}
-      <Alert>
-        <Construction className="h-4 w-4" />
-        <AlertDescription>
-          Fitur ini sedang dalam pengembangan. Beberapa fungsi mungkin belum tersedia.
-        </AlertDescription>
-      </Alert>
+      {/* Feature is now fully functional */}
 
       {/* Filter tanggal */}
       <div className="flex items-center gap-4">
@@ -112,46 +121,50 @@ export default function AbsensiPage() {
         </CardHeader>
         <CardContent>
           {filteredAbsences.length === 0 ? (
-            <p>Tidak ada data absensi.</p>
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Tidak ada data absensi untuk tanggal yang dipilih.</p>
+            </div>
           ) : (
-            <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-4 py-2 text-left">Nama</th>
-                  <th className="px-4 py-2 text-left">Tanggal</th>
-                  <th className="px-4 py-2 text-left">Check In</th>
-                  <th className="px-4 py-2 text-left">Check Out</th>
-                  <th className="px-4 py-2 text-left">Status</th>
-                  <th className="px-4 py-2 text-left">Catatan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAbsences.map((absence) => (
-                  <tr key={absence.id} className="border-t">
-                    <td className="px-4 py-2">{absence.user.name}</td>
-                    <td className="px-4 py-2">{formatDate(absence.date)}</td>
-                    <td className="px-4 py-2">{formatTime(absence.checkIn)}</td>
-                    <td className="px-4 py-2">
-                      {formatTime(absence.checkOut)}
-                    </td>
-                    <td className="px-4 py-2">
-                      <Badge
-                        variant={
-                          absence.status === "Hadir"
-                            ? "default"
-                            : absence.status === "Pulang"
-                            ? "secondary"
-                            : "destructive"
-                        }
-                      >
-                        {absence.status}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-2">{absence.note || "-"}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 dark:text-gray-100">Nama</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 dark:text-gray-100">Tanggal</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 dark:text-gray-100">Check In</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 dark:text-gray-100">Check Out</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 dark:text-gray-100">Status</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 dark:text-gray-100">Catatan</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredAbsences.map((absence) => (
+                    <tr key={absence.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{absence.user.name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{formatDate(absence.date)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{formatTime(absence.checkIn)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                        {formatTime(absence.checkOut)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge
+                          variant={
+                            absence.status === "Hadir"
+                              ? "default"
+                              : absence.status === "Pulang"
+                              ? "secondary"
+                              : "destructive"
+                          }
+                        >
+                          {absence.status}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{absence.note || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>

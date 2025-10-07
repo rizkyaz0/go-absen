@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { CalendarDays } from "lucide-react";
-import AbsenButton from "@/components/AbsenButton";
+import AbsenceButton from "@/components/AbsenceButton";
 import CutiModal from "@/components/CutiModal";
 import StatCardServer from "@/components/StatCardServer";
 import Loading from "./loading";
@@ -52,7 +52,7 @@ export default function KaryawanDashboard() {
         transition={{ delay: 0.3, duration: 0.5 }}
         className="space-y-4 flex flex-col items-center"
       >
-        <AbsenButton />
+        <AbsenceButton />
         <CutiModal />
       </motion.div>
 
