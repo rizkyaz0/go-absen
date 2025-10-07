@@ -7,7 +7,7 @@ import AbsenceButton from "@/components/AbsenceButton";
 import CutiModal from "@/components/CutiModal";
 import StatCardServer from "@/components/StatCardServer";
 import Loading from "./loading";
-import { getCurrentUser, getAttendanceStats, getLeaveStats } from "@/lib/actions";
+import { getCurrentUser, getAttendanceStats, getUserLeaveStats } from "@/lib/actions";
 
 export default function KaryawanDashboard() {
   const [user, setUser] = useState({ id: null, name: "" });
@@ -68,11 +68,11 @@ export default function KaryawanDashboard() {
           />
 
           <StatCardServer
-            title="Total Cuti"
+            title="Sisa Cuti"
             icon={CalendarDays}
             subtitle="Bulan ini"
-            serverAction={() => getLeaveStats()}
-            field="totalCuti"
+            serverAction={() => getUserLeaveStats(user.id || 0)}
+            field="remainingLeave"
           />
         </div>
       </div>

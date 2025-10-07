@@ -13,15 +13,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Home } from "lucide-react";
-import { getCurrentUser, createLeaveRequest } from "@/lib/actions";
+import { getCurrentUser, createLeaveRequest, getUserLeaveStats } from "@/lib/actions";
 
 export default function CutiModal() {
   const [tanggalMulai, setTanggalMulai] = useState("");
   const [tanggalAkhir, setTanggalAkhir] = useState("");
   const [alasan, setAlasan] = useState("");
   const [userId, setUserId] = useState(null);
+  const [remainingLeave, setRemainingLeave] = useState(2);
 
-  // Ambil userId dari login
+  // Ambil userId dari login dan sisa cuti
   useEffect(() => {
     async function fetchUser() {
       try {
@@ -31,6 +32,12 @@ export default function CutiModal() {
           return;
         }
         setUserId(result.id);
+        
+        // Ambil sisa cuti
+        const leaveStats = await getUserLeaveStats(result.id);
+        if (leaveStats.success) {
+          setRemainingLeave(leaveStats.data.remainingLeave);
+        }
       } catch (err) {
         console.error(err);
       }
@@ -42,6 +49,24 @@ export default function CutiModal() {
     e.preventDefault();
     if (!userId) {
       alert("❌ User belum terdeteksi");
+      return;
+    }
+
+    // Validasi tanggal
+    if (tanggalAkhir < tanggalMulai) {
+      alert("❌ Tanggal akhir tidak boleh lebih awal dari tanggal mulai");
+      return;
+    }
+
+    // Hitung berapa hari cuti yang diminta
+    const startDate = new Date(tanggalMulai);
+    const endDate = new Date(tanggalAkhir);
+    const timeDiff = endDate.getTime() - startDate.getTime();
+    const requestedDays = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1;
+
+    // Validasi sisa cuti
+    if (requestedDays > remainingLeave) {
+      alert(`❌ Sisa cuti tidak mencukupi. Sisa cuti: ${remainingLeave} hari, yang diminta: ${requestedDays} hari`);
       return;
     }
 
@@ -88,6 +113,12 @@ export default function CutiModal() {
         <DialogDescription className="text-sm text-gray-500 mb-4">
           Isi tanggal dan alasan cuti. HRD akan meninjau pengajuan.
         </DialogDescription>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <p className="text-sm text-blue-800">
+            <strong>Sisa cuti bulan ini:</strong> {remainingLeave} hari
+          </p>
+        </div>
 
         <form
           onSubmit={handleSubmit}

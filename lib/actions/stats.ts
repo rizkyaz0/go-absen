@@ -110,3 +110,64 @@ export async function getLeaveStats() {
     return { error: 'Failed to fetch leave stats' }
   }
 }
+
+export async function getUserLeaveStats(userId: number) {
+  try {
+    await verifyToken()
+
+    if (!userId) {
+      return { success: true, data: { remainingLeave: 2, usedLeave: 0 } }
+    }
+
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = today.getMonth() + 1
+
+    // Ambil semua cuti yang disetujui untuk user ini dalam bulan ini
+    const approvedLeaves = await prisma.leaveRequest.findMany({
+      where: {
+        userId: userId,
+        status: 'Approved',
+        startDate: {
+          gte: new Date(year, month - 1, 1),
+          lte: new Date(year, month, 0)
+        }
+      },
+      select: {
+        startDate: true,
+        endDate: true
+      }
+    })
+
+    // Hitung total hari cuti yang sudah digunakan
+    let usedLeaveDays = 0
+    approvedLeaves.forEach((leave: { startDate: Date; endDate: Date }) => {
+      const startDate = new Date(leave.startDate)
+      const endDate = new Date(leave.endDate)
+      
+      // Hitung perbedaan hari (1 cuti = 1 hari)
+      // Jika startDate dan endDate sama, maka 1 hari
+      // Jika berbeda, hitung selisih hari + 1 (termasuk hari terakhir)
+      const timeDiff = endDate.getTime() - startDate.getTime()
+      const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1
+      
+      usedLeaveDays += daysDiff
+    })
+
+    // Jatah cuti per bulan = 2 hari
+    const monthlyLeaveQuota = 2
+    const remainingLeave = Math.max(0, monthlyLeaveQuota - usedLeaveDays)
+
+    return {
+      success: true,
+      data: {
+        remainingLeave,
+        usedLeave: usedLeaveDays,
+        monthlyQuota: monthlyLeaveQuota
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching user leave stats:', err)
+    return { success: true, data: { remainingLeave: 2, usedLeave: 0 } }
+  }
+}
