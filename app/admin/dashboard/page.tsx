@@ -17,9 +17,9 @@ interface Absence {
   id: number;
   user: { id: number; name: string };
   shiftId?: number | null;
-  date: string;
-  checkIn?: string | null;
-  checkOut?: string | null;
+  date: string | Date;
+  checkIn?: string | Date | null;
+  checkOut?: string | Date | null;
   status: "Hadir" | "Terlambat" | "Absen" | "Pulang";
   note?: string;
 }
@@ -64,9 +64,10 @@ export default function AdminDashboard() {
   if (loading) return <div>Loading...</div>;
 
   // Helpers
-  const isToday = (dateStr: string) => {
+  const isToday = (date?: string | Date | null) => {
+    if (!date) return false;
+    const d = date instanceof Date ? date : new Date(date);
     const today = new Date();
-    const d = new Date(dateStr);
     return (
       d.getFullYear() === today.getFullYear() &&
       d.getMonth() === today.getMonth() &&
@@ -74,10 +75,36 @@ export default function AdminDashboard() {
     );
   };
 
-  const getMinutes = (time?: string | null) => {
+  const getMinutes = (time?: string | Date | null) => {
     if (!time) return null;
-    const [h, m] = time.split(":").map(Number);
+    
+    let timeString: string;
+    if (time instanceof Date) {
+      // Convert Date to Asia/Jakarta timezone and format as HH:mm
+      const localTime = new Date(time.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+      timeString = localTime.toTimeString().slice(0, 5); // Get HH:mm part
+    } else if (typeof time === 'string') {
+      timeString = time;
+    } else {
+      return null;
+    }
+    
+    const [h, m] = timeString.split(":").map(Number);
     return h * 60 + m;
+  };
+
+  const formatTimeDisplay = (time?: string | Date | null) => {
+    if (!time) return "-";
+    
+    if (time instanceof Date) {
+      // Convert Date to Asia/Jakarta timezone and format as HH:mm
+      const localTime = new Date(time.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+      return localTime.toTimeString().slice(0, 5); // Get HH:mm part
+    } else if (typeof time === 'string') {
+      return time;
+    }
+    
+    return "-";
   };
 
   // Filter absensi hanya untuk hari ini
@@ -192,7 +219,7 @@ export default function AdminDashboard() {
                     <div>
                       <p className="font-medium">{item.user.name}</p>
                       <p className="text-sm text-gray-500">
-                        {item.checkIn || "-"}
+                        {formatTimeDisplay(item.checkIn)}
                       </p>
                     </div>
                   </div>
