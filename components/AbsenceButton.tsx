@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, getAbsencesByUser, toggleAbsenceAction } from "@/lib/actions";
+import { toZonedTime, format } from 'date-fns-tz';
 
 interface Absence {
   id: number;
@@ -23,14 +24,17 @@ export default function AbsenceButton() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Safe date formatter
+  // Safe date formatter with timezone support
   const formatDate = (date?: string | Date | number | null) => {
     if (!date) return "-";
     const d = date instanceof Date ? date : new Date(date as string | number);
     if (Number.isNaN(d.getTime())) return "-";
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
+    
+    // Convert UTC date to Asia/Jakarta timezone for display
+    const localDate = toZonedTime(d, 'Asia/Jakarta');
+    const day = String(localDate.getDate()).padStart(2, "0");
+    const month = String(localDate.getMonth() + 1).padStart(2, "0");
+    const year = localDate.getFullYear();
     return `${day}/${month}/${year}`;
   };
 
@@ -74,12 +78,14 @@ export default function AbsenceButton() {
         }
         
         const absences = result.data;
-        const todayUTC7 = new Date(new Date().getTime() + 7 * 60 * 60 * 1000)
-          .toISOString()
-          .slice(0, 10);
+        
+        // Get today's date in Asia/Jakarta timezone
+        const now = new Date();
+        const localTime = toZonedTime(now, 'Asia/Jakarta');
+        const todayDateString = format(localTime, 'yyyy-MM-dd', { timeZone: 'Asia/Jakarta' });
 
         const todayAbsence = absences.find(
-          (a: Absence) => a.userId === userId && formatDate(a.date) === formatDate(todayUTC7)
+          (a: Absence) => a.userId === userId && formatDate(a.date) === formatDate(todayDateString)
         );
 
         if (todayAbsence) {

@@ -4,6 +4,7 @@ import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import jwt from 'jsonwebtoken'
+import { fromZonedTime, toZonedTime, format } from 'date-fns-tz'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key'
 
@@ -89,13 +90,20 @@ export async function createAbsence(absenceData: {
   try {
     await verifyToken()
 
+    const timeZone = 'Asia/Jakarta'
+    
+    // Convert input dates to proper timezone handling
+    const dateUTC = fromZonedTime(new Date(absenceData.date), timeZone)
+    const checkInUTC = absenceData.checkIn ? fromZonedTime(new Date(absenceData.checkIn), timeZone) : null
+    const checkOutUTC = absenceData.checkOut ? fromZonedTime(new Date(absenceData.checkOut), timeZone) : null
+
     const absence = await prisma.absence.create({
       data: {
         userId: absenceData.userId,
         shiftId: absenceData.shiftId || null,
-        date: new Date(absenceData.date),
-        checkIn: absenceData.checkIn ? new Date(absenceData.checkIn) : null,
-        checkOut: absenceData.checkOut ? new Date(absenceData.checkOut) : null,
+        date: dateUTC,
+        checkIn: checkInUTC,
+        checkOut: checkOutUTC,
         status: absenceData.status,
         location: absenceData.location || '',
         note: absenceData.note || '',
@@ -120,11 +128,17 @@ export async function updateAbsence(id: number, absenceData: {
   try {
     await verifyToken()
 
+    const timeZone = 'Asia/Jakarta'
+    
+    // Convert input dates to proper timezone handling
+    const checkInUTC = absenceData.checkIn ? fromZonedTime(new Date(absenceData.checkIn), timeZone) : undefined
+    const checkOutUTC = absenceData.checkOut ? fromZonedTime(new Date(absenceData.checkOut), timeZone) : undefined
+
     const updated = await prisma.absence.update({
       where: { id },
       data: {
-        checkIn: absenceData.checkIn ? new Date(absenceData.checkIn) : undefined,
-        checkOut: absenceData.checkOut ? new Date(absenceData.checkOut) : undefined,
+        checkIn: checkInUTC,
+        checkOut: checkOutUTC,
         status: absenceData.status,
         note: absenceData.note,
       },
@@ -161,10 +175,12 @@ export async function toggleAbsenceAction(userId: number, shiftId: number = 1) {
   try {
     await verifyToken()
     
-    // Get today's date in UTC+7
-    const today = new Date()
-    const todayUTC7 = new Date(today.getTime() + 7 * 60 * 60 * 1000)
-    const todayDateString = todayUTC7.toISOString().slice(0, 10)
+    const timeZone = 'Asia/Jakarta'
+    const now = new Date()
+    
+    // Get current time in Asia/Jakarta timezone
+    const localTime = toZonedTime(now, timeZone)
+    const todayDateString = format(localTime, 'yyyy-MM-dd', { timeZone })
     
     // Check if there's already an absence record for today
     const existingAbsence = await prisma.absence.findFirst({
@@ -179,15 +195,15 @@ export async function toggleAbsenceAction(userId: number, shiftId: number = 1) {
 
     if (!existingAbsence) {
       // Create new absence record for check-in
-      const checkInTime = new Date()
-      const checkInUTC7 = new Date(checkInTime.getTime() + 7 * 60 * 60 * 1000)
+      // Convert local time to UTC for database storage
+      const checkInUTC = fromZonedTime(localTime, timeZone)
       
       const newAbsence = await prisma.absence.create({
         data: {
           userId,
           shiftId,
-          date: checkInUTC7,
-          checkIn: checkInUTC7,
+          date: checkInUTC,
+          checkIn: checkInUTC,
           status: 'Hadir',
           location: 'Kantor Pusat',
           note: 'Datang tepat waktu'
@@ -204,14 +220,23 @@ export async function toggleAbsenceAction(userId: number, shiftId: number = 1) {
         message: 'Absen masuk berhasil!' 
       }
     } else if (existingAbsence.checkIn && !existingAbsence.checkOut) {
+      // Check if it's before 17:00 local time
+      const currentHour = localTime.getHours()
+      if (currentHour < 17) {
+        return { 
+          success: false, 
+          error: 'Belum waktu pulang. Silakan tunggu hingga jam 17:00.' 
+        }
+      }
+      
       // Update existing record for check-out
-      const now = new Date()
-      const nowWIB = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }))
+      // Convert local time to UTC for database storage
+      const checkOutUTC = fromZonedTime(localTime, timeZone)
       
       const updatedAbsence = await prisma.absence.update({
         where: { id: existingAbsence.id },
         data: {
-          checkOut: nowWIB,
+          checkOut: checkOutUTC,
           status: 'Pulang',
           note: 'Pulang sesuai jadwal'
         }

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 // import { Alert, AlertDescription } from "@/components/ui/alert";
 // import { Construction } from "lucide-react";
 import { getAllAbsences } from "@/lib/actions";
+import { toZonedTime, format } from 'date-fns-tz';
 
 interface Absence {
   id: number;
@@ -48,36 +49,38 @@ export default function AbsensiPage() {
 
   if (loading) return <div>Loading...</div>;
 
-  // Safe date formatter - handles Date, string, number, null, undefined
+  // Safe date formatter with timezone support - handles Date, string, number, null, undefined
   const formatDate = (date?: string | Date | number | null) => {
     if (!date) return "-";
     const d = date instanceof Date ? date : new Date(date as string | number);
     if (Number.isNaN(d.getTime())) return "-";
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
+    
+    // Convert UTC date to Asia/Jakarta timezone for display
+    const localDate = toZonedTime(d, 'Asia/Jakarta');
+    const day = String(localDate.getDate()).padStart(2, "0");
+    const month = String(localDate.getMonth() + 1).padStart(2, "0");
+    const year = localDate.getFullYear();
     return `${day}/${month}/${year}`;
   };
 
-  // Safe time formatter - handles Date, string, null, undefined
+  // Safe time formatter with timezone support - handles Date, string, null, undefined
   const formatTime = (time?: string | Date | null) => {
     if (!time) return "-";
     const d = time instanceof Date ? time : new Date(time);
     if (Number.isNaN(d.getTime())) return "-";
-    return d.toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      timeZone: "Asia/Jakarta"
-    });
+    
+    // Convert UTC time to Asia/Jakarta timezone for display
+    const localTime = toZonedTime(d, 'Asia/Jakarta');
+    return format(localTime, 'HH:mm:ss', { timeZone: 'Asia/Jakarta' });
   };
 
-  // Filter berdasarkan tanggal - safe date comparison
+  // Filter berdasarkan tanggal - safe date comparison with timezone
   const filteredAbsences = filterDate
     ? absences.filter((a) => {
         const absenceDate = new Date(a.date);
-        const filterDateObj = new Date(filterDate);
-        return absenceDate.toISOString().slice(0, 10) === filterDateObj.toISOString().slice(0, 10);
+        const localAbsenceDate = toZonedTime(absenceDate, 'Asia/Jakarta');
+        const absenceDateString = format(localAbsenceDate, 'yyyy-MM-dd', { timeZone: 'Asia/Jakarta' });
+        return absenceDateString === filterDate;
       })
     : absences;
 
