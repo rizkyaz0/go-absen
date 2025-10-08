@@ -1,5 +1,6 @@
 'use server'
 
+import { cache } from 'react'
 import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
@@ -15,7 +16,7 @@ async function verifyToken() {
   return payload
 }
 
-export async function getAllLeaveRequests() {
+export const getAllLeaveRequests = cache(async () => {
   try {
     await verifyToken()
 
@@ -40,7 +41,7 @@ export async function getAllLeaveRequests() {
     console.error('Error fetching leave requests:', err)
     return { error: 'Unauthorized' }
   }
-}
+})
 
 export async function createLeaveRequest(leaveData: {
   userId: number

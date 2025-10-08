@@ -40,20 +40,28 @@ export default function AbsenceButton() {
 
   // Ambil info user login
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchUser() {
       try {
         const result = await getCurrentUser();
-        if (result.error) {
-          console.error(result.error);
-          return;
+        if (isMounted) {
+          if (result.error) {
+            console.error(result.error);
+            return;
+          }
+          setUserId(result.id);
+          setShiftId(result.shiftId || 1);
         }
-        setUserId(result.id);
-        setShiftId(result.shiftId || 1);
       } catch (err) {
         console.error(err);
       }
     }
     fetchUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Update jam real-time (UTC+7)
@@ -68,43 +76,53 @@ export default function AbsenceButton() {
   useEffect(() => {
     if (!userId) return;
 
+    let isMounted = true;
+
     async function fetchTodayAbsence() {
       setLoading(true);
       try {
         const result = await getAbsencesByUser(userId!);
-        if (result.error) {
-          console.error(result.error);
-          return;
-        }
-        
-        const absences = result.data;
-        
-        // Get today's date in Asia/Jakarta timezone
-        const now = new Date();
-        const localTime = toZonedTime(now, 'Asia/Jakarta');
-        const todayDateString = format(localTime, 'yyyy-MM-dd', { timeZone: 'Asia/Jakarta' });
+        if (isMounted) {
+          if (result.error) {
+            console.error(result.error);
+            return;
+          }
+          
+          const absences = result.data;
+          
+          // Get today's date in Asia/Jakarta timezone
+          const now = new Date();
+          const localTime = toZonedTime(now, 'Asia/Jakarta');
+          const todayDateString = format(localTime, 'yyyy-MM-dd', { timeZone: 'Asia/Jakarta' });
 
-        const todayAbsence = absences.find(
-          (a: Absence) => a.userId === userId && formatDate(a.date) === formatDate(todayDateString)
-        );
+          const todayAbsence = absences.find(
+            (a: Absence) => a.userId === userId && formatDate(a.date) === formatDate(todayDateString)
+          );
 
-        if (todayAbsence) {
-          setAbsenceId(todayAbsence.id);
-          setSudahMasuk(!!todayAbsence.checkIn);
-          setSudahPulang(!!todayAbsence.checkOut);
-        } else {
-          setAbsenceId(null);
-          setSudahMasuk(false);
-          setSudahPulang(false);
+          if (todayAbsence) {
+            setAbsenceId(todayAbsence.id);
+            setSudahMasuk(!!todayAbsence.checkIn);
+            setSudahPulang(!!todayAbsence.checkOut);
+          } else {
+            setAbsenceId(null);
+            setSudahMasuk(false);
+            setSudahPulang(false);
+          }
         }
       } catch (err) {
         console.error(err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
     fetchTodayAbsence();
+
+    return () => {
+      isMounted = false;
+    };
   }, [userId]);
 
   const tanggalDisplay = time.toLocaleDateString("id-ID", {

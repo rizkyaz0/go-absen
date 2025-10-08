@@ -1,5 +1,6 @@
 'use server'
 
+import { cache } from 'react'
 import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -50,7 +51,7 @@ export async function loginUser(email: string, password: string) {
   }
 }
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('token')?.value
@@ -88,7 +89,7 @@ export async function getCurrentUser() {
     console.error('JWT verify error:', err)
     return { error: 'Terjadi error' }
   }
-}
+})
 
 export async function logoutUser() {
   try {

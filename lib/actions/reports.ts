@@ -1,5 +1,6 @@
 'use server'
 
+// Reports don't need caching as they are complex queries
 import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'

@@ -1,5 +1,6 @@
 'use server'
 
+import { cache } from 'react'
 import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
@@ -15,7 +16,7 @@ async function verifyToken() {
   return payload
 }
 
-export async function getAttendanceStats(userId: number) {
+export const getAttendanceStats = cache(async (userId: number) => {
   try {
     await verifyToken()
 
@@ -43,7 +44,7 @@ export async function getAttendanceStats(userId: number) {
     console.error('Error fetching attendance stats:', err)
     return { success: true, data: { value: 0 } }
   }
-}
+})
 
 export async function getLeaveStats() {
   try {
@@ -111,7 +112,7 @@ export async function getLeaveStats() {
   }
 }
 
-export async function getUserLeaveStats(userId: number) {
+export const getUserLeaveStats = cache(async (userId: number) => {
   try {
     await verifyToken()
 
@@ -170,4 +171,4 @@ export async function getUserLeaveStats(userId: number) {
     console.error('Error fetching user leave stats:', err)
     return { success: true, data: { remainingLeave: 2, usedLeave: 0 } }
   }
-}
+})

@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, XCircle, Users, Construction } from "lucide-react";
-import { getAllUsers, getAllAbsences } from "@/lib/actions";
+import { getCachedAllUsers, getCachedAllAbsences } from "@/lib/actions";
 
 interface Absence {
   id: number;
@@ -38,27 +38,38 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchData() {
       try {
-        // Fetch users
-        const usersResult = await getAllUsers();
-        if (usersResult.success) {
-          setUsers(usersResult.data);
-        }
+        // Fetch users and absences in parallel
+        const [usersResult, absencesResult] = await Promise.all([
+          getCachedAllUsers(),
+          getCachedAllAbsences()
+        ]);
 
-        // Fetch absences
-        const absencesResult = await getAllAbsences();
-        if (absencesResult.success) {
-          setAbsences(absencesResult.data);
+        if (isMounted) {
+          if (usersResult.success) {
+            setUsers(usersResult.data);
+          }
+          if (absencesResult.success) {
+            setAbsences(absencesResult.data);
+          }
         }
       } catch (err) {
         console.error("Error fetching data:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
     fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (loading) return <div>Loading...</div>;

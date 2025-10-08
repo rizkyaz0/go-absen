@@ -1,5 +1,7 @@
 'use server'
 
+import { cache } from 'react'
+import { unstable_cache } from 'next/cache'
 import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
@@ -17,7 +19,7 @@ async function verifyToken() {
   return payload
 }
 
-export async function getAllAbsences() {
+export const getAllAbsences = cache(async () => {
   try {
     await verifyToken()
 
@@ -45,9 +47,44 @@ export async function getAllAbsences() {
     console.error('Error fetching absences:', err)
     return { error: 'Unauthorized' }
   }
-}
+})
 
-export async function getAbsencesByUser(userId: number) {
+// Cached version with longer TTL for admin dashboard
+export const getCachedAllAbsences = unstable_cache(
+  async () => {
+    try {
+      await verifyToken()
+      const absences = await prisma.absence.findMany({
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              roleId: true,
+              statusId: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+          shift: true,
+        },
+        orderBy: { date: 'desc' },
+      })
+      return { success: true, data: absences }
+    } catch (err) {
+      console.error('Error fetching absences:', err)
+      return { error: 'Unauthorized' }
+    }
+  },
+  ['all-absences'],
+  { 
+    tags: ['absences'],
+    revalidate: 60 // 1 minute
+  }
+)
+
+export const getAbsencesByUser = cache(async (userId: number) => {
   try {
     await verifyToken()
 
@@ -75,7 +112,7 @@ export async function getAbsencesByUser(userId: number) {
     console.error('Error fetching user absences:', err)
     return { error: 'Unauthorized' }
   }
-}
+})
 
 export async function createAbsence(absenceData: {
   userId: number

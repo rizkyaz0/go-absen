@@ -15,3 +15,7 @@ export * from './reports'
 
 // Statistics actions
 export * from './stats'
+
+// Cached versions for better performance
+export { getCachedAllUsers } from './users'
+export { getCachedAllAbsences } from './absences'

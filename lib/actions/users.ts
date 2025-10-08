@@ -1,5 +1,7 @@
 'use server'
 
+import { cache } from 'react'
+import { unstable_cache } from 'next/cache'
 import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
@@ -15,7 +17,7 @@ async function verifyToken() {
   return payload
 }
 
-export async function getAllUsers() {
+export const getAllUsers = cache(async () => {
   try {
     await verifyToken() // Semua user login bisa akses
 
@@ -35,9 +37,37 @@ export async function getAllUsers() {
     console.error('Error fetching users:', err)
     return { error: 'Unauthorized' }
   }
-}
+})
 
-export async function getUserById(id: number) {
+// Cached version with longer TTL for admin dashboard
+export const getCachedAllUsers = unstable_cache(
+  async () => {
+    try {
+      await verifyToken()
+      const users = await prisma.user.findMany({
+        select: { 
+          id: true, 
+          name: true, 
+          roleId: true, 
+          statusId: true,
+          createdAt: true,
+          updatedAt: true
+        },
+      })
+      return { success: true, data: users }
+    } catch (err) {
+      console.error('Error fetching users:', err)
+      return { error: 'Unauthorized' }
+    }
+  },
+  ['all-users'],
+  { 
+    tags: ['users'],
+    revalidate: 300 // 5 minutes
+  }
+)
+
+export const getUserById = cache(async (id: number) => {
   try {
     await verifyToken() // Semua user login bisa akses
 
@@ -60,7 +90,7 @@ export async function getUserById(id: number) {
     console.error('Error fetching user:', err)
     return { error: 'Unauthorized' }
   }
-}
+})
 
 export async function createUser(userData: {
   name: string
