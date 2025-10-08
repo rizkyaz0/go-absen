@@ -94,7 +94,7 @@ export async function logoutUser() {
   try {
     const cookieStore = await cookies()
     cookieStore.delete('token')
-    redirect('/login')
+    return { success: true } 
   } catch (err) {
     console.error('Logout error:', err)
     return { error: 'Gagal logout' }
