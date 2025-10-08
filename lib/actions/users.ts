@@ -42,31 +42,74 @@ export const getAllUsers = cache(async () => {
 // Cached version with longer TTL for admin dashboard
 export const getCachedAllUsers = unstable_cache(
   async () => {
-    try {
-      await verifyToken()
-      const users = await prisma.user.findMany({
-        select: { 
-          id: true, 
-          name: true, 
-          roleId: true, 
-          statusId: true,
-          createdAt: true,
-          updatedAt: true
-        },
-      })
-      return { success: true, data: users }
-    } catch (err) {
-      console.error('Error fetching users:', err)
-      return { error: 'Unauthorized' }
-    }
+    const users = await prisma.user.findMany({
+      select: { 
+        id: true, 
+        name: true, 
+        roleId: true, 
+        statusId: true,
+        createdAt: true,
+        updatedAt: true
+      },
+    })
+    return { success: true, data: users }
   },
   ['all-users'],
   { 
     tags: ['users'],
-    revalidate: 300 // 5 minutes
+    revalidate: 60 // 60 seconds
   }
 )
 
+// Wrapper function that handles authentication
+export async function getAllUsersCached() {
+  try {
+    await verifyToken()
+    return await getCachedAllUsers()
+  } catch (err) {
+    console.error('Error fetching users:', err)
+    return { error: 'Unauthorized' }
+  }
+}
+
+// Cached version for getUserById
+export const getCachedUserById = unstable_cache(
+  async (id: number) => {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { 
+        id: true, 
+        name: true, 
+        roleId: true, 
+        statusId: true 
+      },
+    })
+
+    if (!user) {
+      return { error: 'User tidak ditemukan' }
+    }
+
+    return { success: true, data: user }
+  },
+  ['user-by-id'],
+  { 
+    tags: ['users'],
+    revalidate: 60 // 60 seconds
+  }
+)
+
+// Wrapper function that handles authentication
+export async function getUserByIdCached(id: number) {
+  try {
+    await verifyToken()
+    return await getCachedUserById(id)
+  } catch (err) {
+    console.error('Error fetching user:', err)
+    return { error: 'Unauthorized' }
+  }
+}
+
+// Keep original for backward compatibility
 export const getUserById = cache(async (id: number) => {
   try {
     await verifyToken() // Semua user login bisa akses

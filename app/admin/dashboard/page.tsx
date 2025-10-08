@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, XCircle, Users, Construction } from "lucide-react";
-import { getCachedAllUsers, getCachedAllAbsences } from "@/lib/actions";
+import { getAllUsersCached, getAllAbsencesCached } from "@/lib/actions";
 
 interface Absence {
   id: number;
@@ -44,15 +44,15 @@ export default function AdminDashboard() {
       try {
         // Fetch users and absences in parallel
         const [usersResult, absencesResult] = await Promise.all([
-          getCachedAllUsers(),
-          getCachedAllAbsences()
+          getAllUsersCached(),
+          getAllAbsencesCached()
         ]);
 
         if (isMounted) {
-          if (usersResult.success) {
+          if ('success' in usersResult && usersResult.success) {
             setUsers(usersResult.data);
           }
-          if (absencesResult.success) {
+          if ('success' in absencesResult && absencesResult.success) {
             setAbsences(absencesResult.data);
           }
         }

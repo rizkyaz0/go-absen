@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Home } from "lucide-react";
-import { getCurrentUser, createLeaveRequest, getUserLeaveStats } from "@/lib/actions";
+import { getCurrentUserCached, createLeaveRequest, getUserLeaveStatsCached } from "@/lib/actions";
 
 export default function CutiModal() {
   const [tanggalMulai, setTanggalMulai] = useState("");
@@ -26,16 +26,16 @@ export default function CutiModal() {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const result = await getCurrentUser();
-        if (result.error) {
+        const result = await getCurrentUserCached();
+        if ('error' in result) {
           console.error(result.error);
           return;
         }
         setUserId(result.id);
         
         // Ambil sisa cuti
-        const leaveStats = await getUserLeaveStats(result.id);
-        if (leaveStats.success) {
+        const leaveStats = await getUserLeaveStatsCached(result.id);
+        if ('success' in leaveStats && leaveStats.success) {
           setRemainingLeave(leaveStats.data.remainingLeave);
         }
       } catch (err) {

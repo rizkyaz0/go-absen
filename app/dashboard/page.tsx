@@ -7,7 +7,7 @@ import AbsenceButton from "@/components/AbsenceButton";
 import CutiModal from "@/components/CutiModal";
 import StatCardServer from "@/components/StatCardServer";
 import Loading from "./loading";
-import { getCurrentUser, getAttendanceStats, getUserLeaveStats } from "@/lib/actions";
+import { getCurrentUserCached, getAttendanceStatsCached, getUserLeaveStatsCached } from "@/lib/actions";
 
 export default function KaryawanDashboard() {
   const [user, setUser] = useState({ id: null, name: "" });
@@ -15,8 +15,8 @@ export default function KaryawanDashboard() {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const result = await getCurrentUser();
-        if (result.error) {
+        const result = await getCurrentUserCached();
+        if ('error' in result) {
           console.error(result.error);
           return;
         }
@@ -63,7 +63,7 @@ export default function KaryawanDashboard() {
             title="Kehadiran"
             icon={CalendarDays}
             subtitle="Bulan ini"
-            serverAction={() => getAttendanceStats(user.id || 0)}
+            serverAction={() => getAttendanceStatsCached(user.id || 0)}
             field="value"
           />
 
@@ -71,7 +71,7 @@ export default function KaryawanDashboard() {
             title="Sisa Cuti"
             icon={CalendarDays}
             subtitle="Bulan ini"
-            serverAction={() => getUserLeaveStats(user.id || 0)}
+            serverAction={() => getUserLeaveStatsCached(user.id || 0)}
             field="remainingLeave"
           />
         </div>

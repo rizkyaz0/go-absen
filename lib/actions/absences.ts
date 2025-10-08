@@ -52,38 +52,86 @@ export const getAllAbsences = cache(async () => {
 // Cached version with longer TTL for admin dashboard
 export const getCachedAllAbsences = unstable_cache(
   async () => {
-    try {
-      await verifyToken()
-      const absences = await prisma.absence.findMany({
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              roleId: true,
-              statusId: true,
-              createdAt: true,
-              updatedAt: true,
-            },
+    const absences = await prisma.absence.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            roleId: true,
+            statusId: true,
+            createdAt: true,
+            updatedAt: true,
           },
-          shift: true,
         },
-        orderBy: { date: 'desc' },
-      })
-      return { success: true, data: absences }
-    } catch (err) {
-      console.error('Error fetching absences:', err)
-      return { error: 'Unauthorized' }
-    }
+        shift: true,
+      },
+      orderBy: { date: 'desc' },
+    })
+    return { success: true, data: absences }
   },
   ['all-absences'],
   { 
     tags: ['absences'],
-    revalidate: 60 // 1 minute
+    revalidate: 60 // 60 seconds
   }
 )
 
+// Wrapper function that handles authentication
+export async function getAllAbsencesCached() {
+  try {
+    await verifyToken()
+    return await getCachedAllAbsences()
+  } catch (err) {
+    console.error('Error fetching absences:', err)
+    return { error: 'Unauthorized' }
+  }
+}
+
+// Cached version for getAbsencesByUser
+export const getCachedAbsencesByUser = unstable_cache(
+  async (userId: number) => {
+    const absences = await prisma.absence.findMany({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            roleId: true,
+            statusId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        shift: true,
+      },
+      orderBy: { date: 'desc' },
+    })
+
+    return { success: true, data: absences }
+  },
+  ['absences-by-user'],
+  { 
+    tags: ['absences'],
+    revalidate: 60 // 60 seconds
+  }
+)
+
+// Wrapper function that handles authentication
+export async function getAbsencesByUserCached(userId: number) {
+  try {
+    await verifyToken()
+    return await getCachedAbsencesByUser(userId)
+  } catch (err) {
+    console.error('Error fetching user absences:', err)
+    return { error: 'Unauthorized' }
+  }
+}
+
+// Keep original for backward compatibility
 export const getAbsencesByUser = cache(async (userId: number) => {
   try {
     await verifyToken()

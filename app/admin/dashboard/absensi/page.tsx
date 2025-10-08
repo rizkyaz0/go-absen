@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 // import { Alert, AlertDescription } from "@/components/ui/alert";
 // import { Construction } from "lucide-react";
-import { getCachedAllAbsences } from "@/lib/actions";
+import { getAllAbsencesCached } from "@/lib/actions";
 import { toZonedTime, format } from 'date-fns-tz';
 
 interface Absence {
@@ -33,8 +33,8 @@ export default function AbsensiPage() {
   useEffect(() => {
     async function fetchAbsences() {
       try {
-        const result = await getCachedAllAbsences();
-        if (result.success) {
+        const result = await getAllAbsencesCached();
+        if ('success' in result && result.success) {
           setAbsences(result.data);
         }
       } catch (err) {

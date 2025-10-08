@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { getCurrentUser, getAbsencesByUser, toggleAbsenceAction } from "@/lib/actions";
+import { getCurrentUserCached, getAbsencesByUserCached, toggleAbsenceAction } from "@/lib/actions";
 import { toZonedTime, format } from 'date-fns-tz';
 
 interface Absence {
@@ -44,9 +44,9 @@ export default function AbsenceButton() {
 
     async function fetchUser() {
       try {
-        const result = await getCurrentUser();
+        const result = await getCurrentUserCached();
         if (isMounted) {
-          if (result.error) {
+          if ('error' in result) {
             console.error(result.error);
             return;
           }
@@ -81,9 +81,9 @@ export default function AbsenceButton() {
     async function fetchTodayAbsence() {
       setLoading(true);
       try {
-        const result = await getAbsencesByUser(userId!);
+        const result = await getAbsencesByUserCached(userId!);
         if (isMounted) {
-          if (result.error) {
+          if ('error' in result) {
             console.error(result.error);
             return;
           }

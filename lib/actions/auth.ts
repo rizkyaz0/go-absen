@@ -1,6 +1,7 @@
 'use server'
 
 import { cache } from 'react'
+import { unstable_cache } from 'next/cache'
 import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -51,6 +52,59 @@ export async function loginUser(email: string, password: string) {
   }
 }
 
+// Cached version for getCurrentUser
+export const getCachedCurrentUser = unstable_cache(
+  async (userId: number) => {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        roleId: true,
+        statusId: true,
+      },
+    })
+
+    if (!user) {
+      return { error: 'User tidak ditemukan' }
+    }
+
+    return {
+      ...user,
+      shiftId: 1, // default shiftId
+    }
+  },
+  ['current-user'],
+  { 
+    tags: ['auth', 'user'],
+    revalidate: 60 // 60 seconds
+  }
+)
+
+// Wrapper function that handles authentication
+export async function getCurrentUserCached() {
+  try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get('token')?.value
+
+    if (!token) {
+      return { error: 'Belum login' }
+    }
+
+    // Verify token
+    const payload = jwt.verify(token, JWT_SECRET) as {
+      userId: number
+      roleId: number
+    }
+
+    return await getCachedCurrentUser(payload.userId)
+  } catch (err) {
+    console.error('JWT verify error:', err)
+    return { error: 'Terjadi error' }
+  }
+}
+
+// Keep original for backward compatibility
 export const getCurrentUser = cache(async () => {
   try {
     const cookieStore = await cookies()

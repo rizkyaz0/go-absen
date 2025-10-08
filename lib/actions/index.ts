@@ -17,5 +17,33 @@ export * from './reports'
 export * from './stats'
 
 // Cached versions for better performance
-export { getCachedAllUsers } from './users'
-export { getCachedAllAbsences } from './absences'
+export { 
+  getCachedAllUsers, 
+  getAllUsersCached,
+  getCachedUserById,
+  getUserByIdCached 
+} from './users'
+
+export { 
+  getCachedAllAbsences, 
+  getAllAbsencesCached,
+  getCachedAbsencesByUser,
+  getAbsencesByUserCached 
+} from './absences'
+
+export { 
+  getCachedAttendanceStats,
+  getAttendanceStatsCached,
+  getCachedUserLeaveStats,
+  getUserLeaveStatsCached 
+} from './stats'
+
+export { 
+  getCachedCurrentUser,
+  getCurrentUserCached 
+} from './auth'
+
+export { 
+  getCachedAllLeaveRequests,
+  getAllLeaveRequestsCached 
+} from './leave'
