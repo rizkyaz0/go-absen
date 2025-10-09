@@ -32,7 +32,7 @@ import {
   getLateEmployeesReport, 
   getDailyReport 
 } from '@/lib/actions';
-import { toast } from "sonner";
+import { showExportSuccessToast, showExportErrorToast } from "@/lib/toast-utils";
 
 // Helper function untuk mendapatkan inisial nama
 const getInitials = (name: string | null | undefined): string => {
@@ -216,11 +216,10 @@ export default function LaporanPage() {
       }
 
       pdf.save(`laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.pdf`);
+      showExportSuccessToast('PDF');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error('Gagal membuat PDF', {
-        description: 'Silakan coba lagi',
-      });
+      showExportErrorToast('PDF');
     }
   };
 
@@ -279,11 +278,10 @@ export default function LaporanPage() {
       });
 
       XLSX.writeFile(workbook, `laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.xlsx`);
+      showExportSuccessToast('Excel');
     } catch (error) {
       console.error('Error generating Excel:', error);
-      toast.error('Gagal membuat Excel', {
-        description: 'Silakan coba lagi',
-      });
+      showExportErrorToast('Excel');
     }
   };
 

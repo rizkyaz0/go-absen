@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Construction } from "lucide-react";
 import { getAllLeaveRequests, updateLeaveRequestStatus } from "@/lib/actions";
-import { toast } from "sonner";
+import { showErrorToast, showLeaveStatusUpdatedToast } from "@/lib/toast-utils";
 
 interface Izin {
   id: number;
@@ -56,9 +56,7 @@ export default function IzinPage() {
     try {
       const result = await updateLeaveRequestStatus(id, status);
       if (result.error) {
-        toast.error("Gagal update status izin", {
-          description: result.error,
-        });
+        showErrorToast("Gagal update status izin", result.error);
         return;
       }
 
@@ -66,13 +64,9 @@ export default function IzinPage() {
         prev.map((item) => (item.id === id ? { ...item, status } : item))
       );
       
-      toast.success("Status izin berhasil diupdate", {
-        description: `Izin telah ${status === 'Approved' ? 'disetujui' : 'ditolak'}`,
-      });
+      showLeaveStatusUpdatedToast(status);
     } catch (err) {
-      toast.error("Gagal update status izin", {
-        description: (err as Error).message,
-      });
+      showErrorToast("Gagal update status izin", (err as Error).message);
     }
   };
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { getCurrentUserCached, getAbsencesByUserCached, toggleAbsenceAction } from "@/lib/actions";
 import { toZonedTime, format } from 'date-fns-tz';
-import { toast } from "sonner";
+import { showErrorToast, showAbsenceCheckInToast, showAbsenceCheckOutToast } from "@/lib/toast-utils";
 
 interface Absence {
   id: number;
@@ -149,9 +149,7 @@ export default function AbsenceButton() {
       const result = await toggleAbsenceAction(userId!, shiftId);
       
       if (result.error) {
-        toast.error("Gagal absen", {
-          description: result.error,
-        });
+        showErrorToast("❌ Gagal Absen", result.error);
         return;
       }
 
@@ -160,23 +158,19 @@ export default function AbsenceButton() {
           setAbsenceId(result.data.id);
           setSudahMasuk(true);
           setSudahPulang(false);
+          showAbsenceCheckInToast(jamDisplay);
         } else if (result.action === 'checkout') {
           setSudahPulang(true);
           // Update absenceId if needed
           if (result.data.id) {
             setAbsenceId(result.data.id);
           }
+          showAbsenceCheckOutToast(jamDisplay);
         }
-        
-        toast.success("Berhasil absen", {
-          description: result.message,
-        });
       }
     } catch (err) {
       console.error(err);
-      toast.error("Terjadi kesalahan", {
-        description: "Gagal melakukan absensi, silakan coba lagi",
-      });
+      showErrorToast("❌ Terjadi Kesalahan", "Gagal melakukan absensi, silakan coba lagi");
     } finally {
       setActionLoading(false);
     }

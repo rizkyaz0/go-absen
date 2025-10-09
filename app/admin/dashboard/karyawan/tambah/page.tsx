@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createUser } from "@/lib/actions";
-import { toast } from "sonner";
+import { showErrorToast, showUserAddedToast } from "@/lib/toast-utils";
 
 export default function TambahKaryawanPage() {
   const router = useRouter();
@@ -46,20 +46,14 @@ export default function TambahKaryawanPage() {
       });
 
       if (result.error) {
-        toast.error("Gagal menambah karyawan", {
-          description: result.error,
-        });
+        showErrorToast("Gagal menambah karyawan", result.error);
         return;
       }
 
-      toast.success("Karyawan berhasil ditambahkan", {
-        description: "Data karyawan baru telah disimpan",
-      });
+      showUserAddedToast(name);
       router.push("/admin/dashboard/karyawan");
     } catch (error) {
-      toast.error("Gagal menambah karyawan", {
-        description: (error as Error).message,
-      });
+      showErrorToast("Gagal menambah karyawan", (error as Error).message);
     } finally {
       setLoading(false);
     }

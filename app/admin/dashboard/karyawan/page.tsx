@@ -22,7 +22,7 @@ import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Construction } from "lucide-react";
 import { getAllUsers, deleteUser } from "@/lib/actions";
-import { toast } from "sonner";
+import { showErrorToast, showUserDeletedToast } from "@/lib/toast-utils";
 
 interface User {
   id: number;
@@ -95,24 +95,19 @@ export default function KaryawanPage() {
       const result = await deleteUser(selectedUserId);
       
       if (result.error) {
-        toast.error("Gagal menghapus user", {
-          description: result.error,
-        });
+        showErrorToast("Gagal menghapus user", result.error);
         return;
       }
 
       // Hapus di UI setelah berhasil
+      const deletedUser = users.find(user => user.id === selectedUserId);
       setUsers((prev) => prev.filter((user) => user.id !== selectedUserId));
       setSelectedUserId(null);
       setDeleteModalOpen(false);
       
-      toast.success("User berhasil dihapus", {
-        description: "Data karyawan telah dihapus dari sistem",
-      });
+      showUserDeletedToast(deletedUser?.name || "User");
     } catch (error) {
-      toast.error("Gagal menghapus user", {
-        description: (error as Error).message,
-      });
+      showErrorToast("Gagal menghapus user", (error as Error).message);
     } finally {
       setIsDeleting(false);
     }

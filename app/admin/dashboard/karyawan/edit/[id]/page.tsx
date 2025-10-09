@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getUserById, updateUser } from "@/lib/actions";
-import { toast } from "sonner";
+import { showErrorToast, showUserUpdatedToast } from "@/lib/toast-utils";
 
 export default function EditKaryawanPage() {
   const router = useRouter();
@@ -41,9 +41,7 @@ export default function EditKaryawanPage() {
       try {
         const result = await getUserById(Number(id));
         if (result.error) {
-          toast.error("Gagal mengambil data karyawan", {
-            description: result.error,
-          });
+          showErrorToast("Gagal mengambil data karyawan", result.error);
           return;
         }
         
@@ -52,9 +50,7 @@ export default function EditKaryawanPage() {
         setRoleId(data.roleId);
         setStatusId(data.statusId);
       } catch (error) {
-        toast.error("Gagal mengambil data karyawan", {
-          description: (error as Error).message,
-        });
+        showErrorToast("Gagal mengambil data karyawan", (error as Error).message);
       } finally {
         setLoadingData(false);
       }
@@ -76,20 +72,14 @@ export default function EditKaryawanPage() {
       });
 
       if (result.error) {
-        toast.error("Gagal memperbarui karyawan", {
-          description: result.error,
-        });
+        showErrorToast("Gagal memperbarui karyawan", result.error);
         return;
       }
 
-      toast.success("Karyawan berhasil diperbarui", {
-        description: "Data karyawan telah diupdate",
-      });
+      showUserUpdatedToast(name);
       router.push("/admin/dashboard/karyawan");
     } catch (error) {
-      toast.error("Gagal memperbarui karyawan", {
-        description: (error as Error).message,
-      });
+      showErrorToast("Gagal memperbarui karyawan", (error as Error).message);
     } finally {
       setLoading(false);
     }
