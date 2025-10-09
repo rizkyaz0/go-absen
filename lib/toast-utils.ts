@@ -7,9 +7,10 @@ export const showSuccessToast = (title: string, description?: string, duration =
     description,
     duration,
     style: {
-      backgroundColor: "hsl(142, 76%, 36%)",
+      backgroundColor: "rgba(34, 197, 94, 0.95)",
       color: "hsl(355, 7%, 97%)",
-      border: "1px solid hsl(142, 76%, 36%)",
+      border: "none",
+      backdropFilter: "blur(8px)",
     },
   });
 };
@@ -19,9 +20,10 @@ export const showErrorToast = (title: string, description?: string, duration = 6
     description,
     duration,
     style: {
-      backgroundColor: "hsl(0, 84%, 60%)",
+      backgroundColor: "rgba(239, 68, 68, 0.95)",
       color: "hsl(355, 7%, 97%)",
-      border: "1px solid hsl(0, 84%, 60%)",
+      border: "none",
+      backdropFilter: "blur(8px)",
     },
   });
 };
@@ -31,9 +33,10 @@ export const showWarningToast = (title: string, description?: string, duration =
     description,
     duration,
     style: {
-      backgroundColor: "hsl(38, 92%, 50%)",
+      backgroundColor: "rgba(245, 158, 11, 0.95)",
       color: "hsl(355, 7%, 97%)",
-      border: "1px solid hsl(38, 92%, 50%)",
+      border: "none",
+      backdropFilter: "blur(8px)",
     },
   });
 };
@@ -43,9 +46,10 @@ export const showInfoToast = (title: string, description?: string, duration = 40
     description,
     duration,
     style: {
-      backgroundColor: "hsl(221, 83%, 53%)",
+      backgroundColor: "rgba(59, 130, 246, 0.95)",
       color: "hsl(355, 7%, 97%)",
-      border: "1px solid hsl(221, 83%, 53%)",
+      border: "none",
+      backdropFilter: "blur(8px)",
     },
   });
 };

@@ -48,11 +48,12 @@ export function LogoutModal({ isOpen, onClose }: LogoutModalProps) {
       onClose={onClose}
       onConfirm={handleLogout}
       title="Konfirmasi Logout"
-      description="Apakah Anda yakin ingin keluar dari akun ini?"
+      description="Apakah Anda yakin ingin keluar dari akun ini? Anda akan diarahkan ke halaman login."
       confirmText="Logout"
       cancelText="Batal"
       variant="destructive"
       isLoading={isLoading}
+      type="warning"
       icon={<LogOut className="h-5 w-5" />}
     />
   );

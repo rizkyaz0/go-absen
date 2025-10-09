@@ -176,13 +176,23 @@ export default function AbsenceButton() {
     }
   };
 
-  if (loading) return <p className="text-center mt-5">Loading...</p>;
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6 items-center w-full">
+        <div className="text-center space-y-2">
+          <div className="h-6 w-48 bg-muted animate-pulse rounded" />
+          <div className="h-8 w-32 bg-muted animate-pulse rounded mx-auto" />
+        </div>
+        <div className="h-12 w-full sm:w-48 bg-muted animate-pulse rounded" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 items-center w-full">
-      <div className="text-center">
-        <p className="text-lg font-semibold">{tanggalDisplay}</p>
-        <p className="text-3xl font-bold">{jamDisplay} WIB</p>
+      <div className="text-center space-y-2">
+        <p className="text-lg font-semibold text-foreground">{tanggalDisplay}</p>
+        <p className="text-3xl font-bold text-primary">{jamDisplay} WIB</p>
       </div>
 
       {/* Tombol Absen Toggle */}
@@ -190,21 +200,30 @@ export default function AbsenceButton() {
         <Button
           onClick={handleToggleAbsence}
           disabled={actionLoading}
-          className={`w-full py-5 text-lg shadow-lg sm:w-auto ${
+          size="lg"
+          className={`w-full sm:w-auto transition-all duration-200 ${
             sudahMasuk 
-              ? "bg-gradient-to-r from-pink-500 to-purple-400" 
-              : "bg-gradient-to-r from-blue-500 to-cyan-400"
+              ? "bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600" 
+              : "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
           }`}
         >
-          {actionLoading ? "Loading..." : sudahMasuk ? "Absen Pulang" : "Absen Masuk"}
+          {actionLoading ? (
+            <>
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              Memproses...
+            </>
+          ) : (
+            sudahMasuk ? "Absen Pulang" : "Absen Masuk"
+          )}
         </Button>
       )}
 
       {/* Status Absen */}
       {sudahMasuk && sudahPulang && (
-        <p className="text-green-500 font-semibold mt-3">
-          Anda sudah selesai absen hari ini ✅
-        </p>
+        <div className="flex items-center gap-2 text-green-600 font-semibold">
+          <div className="h-2 w-2 bg-green-500 rounded-full" />
+          Anda sudah selesai absen hari ini
+        </div>
       )}
     </div>
   );

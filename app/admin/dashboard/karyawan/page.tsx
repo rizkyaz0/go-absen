@@ -193,6 +193,7 @@ export default function KaryawanPage() {
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         isLoading={isDeleting}
+        itemName={users.find(user => user.id === selectedUserId)?.name}
       />
     </div>
   );

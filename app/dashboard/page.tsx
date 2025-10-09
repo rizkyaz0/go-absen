@@ -8,6 +8,7 @@ import CutiModal from "@/components/CutiModal";
 import StatCardServer from "@/components/StatCardServer";
 import Loading from "./loading";
 import { getCurrentUserCached, getAttendanceStatsCached, getUserLeaveStatsCached } from "@/lib/actions";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function KaryawanDashboard() {
   const [user, setUser] = useState({ id: null, name: "" });
@@ -76,6 +77,9 @@ export default function KaryawanDashboard() {
           />
         </div>
       </div>
+
+      {/* Toast Notifications */}
+      <Toaster />
     </div>
   );
 }
