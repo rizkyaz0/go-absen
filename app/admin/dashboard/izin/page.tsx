@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Construction } from "lucide-react";
 import { getAllLeaveRequests, updateLeaveRequestStatus } from "@/lib/actions";
+import { toast } from "sonner";
 
 interface Izin {
   id: number;
@@ -55,15 +56,23 @@ export default function IzinPage() {
     try {
       const result = await updateLeaveRequestStatus(id, status);
       if (result.error) {
-        alert("Gagal update status izin: " + result.error);
+        toast.error("Gagal update status izin", {
+          description: result.error,
+        });
         return;
       }
 
       setIzinData((prev) =>
         prev.map((item) => (item.id === id ? { ...item, status } : item))
       );
+      
+      toast.success("Status izin berhasil diupdate", {
+        description: `Izin telah ${status === 'Approved' ? 'disetujui' : 'ditolak'}`,
+      });
     } catch (err) {
-      alert((err as Error).message);
+      toast.error("Gagal update status izin", {
+        description: (err as Error).message,
+      });
     }
   };
 

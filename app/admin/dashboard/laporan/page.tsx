@@ -32,6 +32,7 @@ import {
   getLateEmployeesReport, 
   getDailyReport 
 } from '@/lib/actions';
+import { toast } from "sonner";
 
 interface SummaryData {
   totalHariKerja: number;
@@ -196,7 +197,9 @@ export default function LaporanPage() {
       pdf.save(`laporan-absensi-${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Gagal membuat PDF. Silakan coba lagi.');
+      toast.error('Gagal membuat PDF', {
+        description: 'Silakan coba lagi',
+      });
     }
   };
 
@@ -257,7 +260,9 @@ export default function LaporanPage() {
       XLSX.writeFile(workbook, `laporan-absensi-${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error) {
       console.error('Error generating Excel:', error);
-      alert('Gagal membuat Excel. Silakan coba lagi.');
+      toast.error('Gagal membuat Excel', {
+        description: 'Silakan coba lagi',
+      });
     }
   };
 

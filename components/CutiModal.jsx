@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Home } from "lucide-react";
 import { getCurrentUserCached, createLeaveRequest, getUserLeaveStatsCached } from "@/lib/actions";
+import { toast } from "sonner";
 
 export default function CutiModal() {
   const [tanggalMulai, setTanggalMulai] = useState("");
@@ -48,13 +49,17 @@ export default function CutiModal() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!userId) {
-      alert("❌ User belum terdeteksi");
+      toast.error("User belum terdeteksi", {
+        description: "Silakan refresh halaman dan coba lagi",
+      });
       return;
     }
 
     // Validasi tanggal
     if (tanggalAkhir < tanggalMulai) {
-      alert("❌ Tanggal akhir tidak boleh lebih awal dari tanggal mulai");
+      toast.error("Tanggal tidak valid", {
+        description: "Tanggal akhir tidak boleh lebih awal dari tanggal mulai",
+      });
       return;
     }
 
@@ -66,7 +71,9 @@ export default function CutiModal() {
 
     // Validasi sisa cuti
     if (requestedDays > remainingLeave) {
-      alert(`❌ Sisa cuti tidak mencukupi. Sisa cuti: ${remainingLeave} hari, yang diminta: ${requestedDays} hari`);
+      toast.error("Sisa cuti tidak mencukupi", {
+        description: `Sisa cuti: ${remainingLeave} hari, yang diminta: ${requestedDays} hari`,
+      });
       return;
     }
 
@@ -80,18 +87,24 @@ export default function CutiModal() {
       });
 
       if (result.error) {
-        alert("❌ Gagal ajukan cuti: " + result.error);
+        toast.error("Gagal ajukan cuti", {
+          description: result.error,
+        });
         return;
       }
 
-      alert("✅ Pengajuan cuti berhasil!");
+      toast.success("Pengajuan cuti berhasil!", {
+        description: "Permintaan cuti Anda telah diajukan",
+      });
       setTanggalMulai("");
       setTanggalAkhir("");
       setAlasan("");
       window.location.reload();
     } catch (err) {
       console.error(err);
-      alert("❌ Gagal ajukan cuti");
+      toast.error("Gagal ajukan cuti", {
+        description: "Terjadi kesalahan saat mengajukan cuti",
+      });
     }
   };
 

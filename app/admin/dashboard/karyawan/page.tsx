@@ -22,6 +22,7 @@ import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Construction } from "lucide-react";
 import { getAllUsers, deleteUser } from "@/lib/actions";
+import { toast } from "sonner";
 
 interface User {
   id: number;
@@ -39,6 +40,7 @@ export default function KaryawanPage() {
   // Modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     async function fetchUsers() {
@@ -89,9 +91,13 @@ export default function KaryawanPage() {
     if (selectedUserId === null) return;
 
     try {
+      setIsDeleting(true);
       const result = await deleteUser(selectedUserId);
+      
       if (result.error) {
-        alert("Gagal menghapus user: " + result.error);
+        toast.error("Gagal menghapus user", {
+          description: result.error,
+        });
         return;
       }
 
@@ -99,8 +105,16 @@ export default function KaryawanPage() {
       setUsers((prev) => prev.filter((user) => user.id !== selectedUserId));
       setSelectedUserId(null);
       setDeleteModalOpen(false);
+      
+      toast.success("User berhasil dihapus", {
+        description: "Data karyawan telah dihapus dari sistem",
+      });
     } catch (error) {
-      alert((error as Error).message);
+      toast.error("Gagal menghapus user", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -183,6 +197,7 @@ export default function KaryawanPage() {
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
       />
     </div>
   );

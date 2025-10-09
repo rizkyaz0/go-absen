@@ -4,7 +4,6 @@ import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key'
@@ -149,7 +148,7 @@ export async function logoutUser() {
   try {
     const cookieStore = await cookies()
     cookieStore.delete('token')
-    redirect('/login')
+    return { success: true }
   } catch (err) {
     console.error('Logout error:', err)
     return { error: 'Gagal logout' }

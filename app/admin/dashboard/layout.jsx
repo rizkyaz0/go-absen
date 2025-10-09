@@ -13,6 +13,8 @@ import {
   LogOut
 } from "lucide-react";
 import { cn } from '@/lib/utils';
+import { LogoutModal } from '@/components/LogoutModal';
+import { Toaster } from '@/components/ui/sonner';
 
 const menuItems = [
   {
@@ -44,6 +46,7 @@ const menuItems = [
 
 export default function AdminLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const pathname = usePathname();
 
   return (
@@ -104,7 +107,11 @@ export default function AdminLayout({ children }) {
 
         {/* Logout Button */}
         <div className="p-4">
-          <Button variant="outline" className="w-full justify-start">
+          <Button 
+            variant="outline" 
+            className="w-full justify-start"
+            onClick={() => setIsLogoutModalOpen(true)}
+          >
             <LogOut className="w-4 h-4" />
             {isSidebarOpen && <span className="ml-2">Logout</span>}
           </Button>
@@ -133,6 +140,15 @@ export default function AdminLayout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* Logout Modal */}
+      <LogoutModal 
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+      />
+
+      {/* Toast Notifications */}
+      <Toaster />
     </div>
   );
 }

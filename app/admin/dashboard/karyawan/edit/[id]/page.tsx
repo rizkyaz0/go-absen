@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getUserById, updateUser } from "@/lib/actions";
+import { toast } from "sonner";
 
 export default function EditKaryawanPage() {
   const router = useRouter();
@@ -40,7 +41,9 @@ export default function EditKaryawanPage() {
       try {
         const result = await getUserById(Number(id));
         if (result.error) {
-          alert("Gagal mengambil data karyawan: " + result.error);
+          toast.error("Gagal mengambil data karyawan", {
+            description: result.error,
+          });
           return;
         }
         
@@ -49,7 +52,9 @@ export default function EditKaryawanPage() {
         setRoleId(data.roleId);
         setStatusId(data.statusId);
       } catch (error) {
-        alert((error as Error).message);
+        toast.error("Gagal mengambil data karyawan", {
+          description: (error as Error).message,
+        });
       } finally {
         setLoadingData(false);
       }
@@ -71,13 +76,20 @@ export default function EditKaryawanPage() {
       });
 
       if (result.error) {
-        alert("Gagal memperbarui karyawan: " + result.error);
+        toast.error("Gagal memperbarui karyawan", {
+          description: result.error,
+        });
         return;
       }
 
+      toast.success("Karyawan berhasil diperbarui", {
+        description: "Data karyawan telah diupdate",
+      });
       router.push("/admin/dashboard/karyawan");
     } catch (error) {
-      alert((error as Error).message);
+      toast.error("Gagal memperbarui karyawan", {
+        description: (error as Error).message,
+      });
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { getCurrentUserCached, getAbsencesByUserCached, toggleAbsenceAction } from "@/lib/actions";
 import { toZonedTime, format } from 'date-fns-tz';
+import { toast } from "sonner";
 
 interface Absence {
   id: number;
@@ -148,7 +149,9 @@ export default function AbsenceButton() {
       const result = await toggleAbsenceAction(userId!, shiftId);
       
       if (result.error) {
-        alert("❌ " + result.error);
+        toast.error("Gagal absen", {
+          description: result.error,
+        });
         return;
       }
 
@@ -165,11 +168,15 @@ export default function AbsenceButton() {
           }
         }
         
-        alert("✅ " + result.message);
+        toast.success("Berhasil absen", {
+          description: result.message,
+        });
       }
     } catch (err) {
       console.error(err);
-      alert("❌ Terjadi kesalahan saat melakukan absensi");
+      toast.error("Terjadi kesalahan", {
+        description: "Gagal melakukan absensi, silakan coba lagi",
+      });
     } finally {
       setActionLoading(false);
     }
