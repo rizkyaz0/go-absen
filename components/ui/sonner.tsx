@@ -10,6 +10,16 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      position="top-right"
+      offset="16px"
+      gap={8}
+      toastOptions={{
+        className: "shadow-lg border max-w-sm sm:max-w-md",
+        style: {
+          boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+        },
+        duration: 4000,
+      }}
       style={
         {
           "--normal-bg": "var(--popover)",

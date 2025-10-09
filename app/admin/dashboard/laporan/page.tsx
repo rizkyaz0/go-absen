@@ -34,6 +34,27 @@ import {
 } from '@/lib/actions';
 import { toast } from "sonner";
 
+// Helper function untuk mendapatkan inisial nama
+const getInitials = (name: string | null | undefined): string => {
+  if (!name) return '??';
+  return name
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+// Helper function untuk safe string operations
+const safeToLowerCase = (str: string | null | undefined): string => {
+  return str?.toLowerCase() || '';
+};
+
+// Helper function untuk safe split operations
+const safeSplit = (str: string | null | undefined, separator: string): string[] => {
+  return str?.split(separator) || [];
+};
+
 interface SummaryData {
   totalHariKerja: number;
   rataRataKehadiran: number;
@@ -68,8 +89,8 @@ interface DailyData {
 
 export default function LaporanPage() {
   const [filterTanggal, setFilterTanggal] = useState({
-    dari: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    hingga: new Date().toISOString().split('T')[0]
+    dari: safeSplit(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(), 'T')[0],
+    hingga: safeSplit(new Date().toISOString(), 'T')[0]
   });
   const [jenisLaporan, setJenisLaporan] = useState('bulanan');
   const [searchQuery, setSearchQuery] = useState('');
@@ -159,8 +180,8 @@ export default function LaporanPage() {
   // Filter karyawan dengan safety check
   const filteredKaryawan = Array.isArray(lateEmployees) 
     ? lateEmployees.filter(karyawan =>
-        karyawan.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        karyawan.jabatan.toLowerCase().includes(searchQuery.toLowerCase())
+        safeToLowerCase(karyawan.nama).includes(safeToLowerCase(searchQuery)) ||
+        safeToLowerCase(karyawan.jabatan).includes(safeToLowerCase(searchQuery))
       )
     : [];
 
@@ -194,7 +215,7 @@ export default function LaporanPage() {
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`laporan-absensi-${new Date().toISOString().split('T')[0]}.pdf`);
+      pdf.save(`laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('Gagal membuat PDF', {
@@ -257,7 +278,7 @@ export default function LaporanPage() {
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
       });
 
-      XLSX.writeFile(workbook, `laporan-absensi-${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.writeFile(workbook, `laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.xlsx`);
     } catch (error) {
       console.error('Error generating Excel:', error);
       toast.error('Gagal membuat Excel', {
@@ -495,7 +516,7 @@ export default function LaporanPage() {
                 <div key={karyawan.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                      {karyawan.nama.split(' ').map(n => n[0]).join('')}
+                      {getInitials(karyawan.nama)}
                     </div>
                     <div>
                       <p className="font-semibold">{karyawan.nama}</p>

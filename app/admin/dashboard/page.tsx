@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, XCircle, Users, Construction } from "lucide-react";
 import { getAllUsersCached, getAllAbsencesCached } from "@/lib/actions";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 interface Absence {
   id: number;
@@ -51,13 +53,31 @@ export default function AdminDashboard() {
         if (isMounted) {
           if ('success' in usersResult && usersResult.success) {
             setUsers(usersResult.data);
+            toast.success("Data karyawan berhasil dimuat", {
+              description: `${usersResult.data.length} karyawan ditemukan`,
+            });
+          } else if ('error' in usersResult) {
+            toast.error("Gagal memuat data karyawan", {
+              description: usersResult.error,
+            });
           }
+          
           if ('success' in absencesResult && absencesResult.success) {
             setAbsences(absencesResult.data);
+            toast.success("Data absensi berhasil dimuat", {
+              description: `${absencesResult.data.length} catatan absensi ditemukan`,
+            });
+          } else if ('error' in absencesResult) {
+            toast.error("Gagal memuat data absensi", {
+              description: absencesResult.error,
+            });
           }
         }
       } catch (err) {
         console.error("Error fetching data:", err);
+        toast.error("Terjadi kesalahan", {
+          description: "Gagal memuat data dashboard",
+        });
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -241,6 +261,9 @@ export default function AdminDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Toast Notifications */}
+      <Toaster />
     </div>
   );
 }
