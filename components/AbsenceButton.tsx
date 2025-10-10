@@ -191,8 +191,8 @@ export default function AbsenceButton() {
   return (
     <div className="flex flex-col gap-6 items-center w-full">
       <div className="text-center space-y-2">
-        <p className="text-lg font-semibold text-foreground">{tanggalDisplay}</p>
-        <p className="text-3xl font-bold text-primary">{jamDisplay} WIB</p>
+        <p className="text-lg font-semibold text-white">{tanggalDisplay}</p>
+        <p className="text-3xl font-bold text-white">{jamDisplay} WIB</p>
       </div>
 
       {/* Tombol Absen Toggle */}
