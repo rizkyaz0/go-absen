@@ -120,12 +120,10 @@ const justifyClasses = {
   evenly: "justify-evenly",
 }
 
-const alignClasses = {
-  start: "items-start",
-  end: "items-end",
-  center: "items-center",
-  baseline: "items-baseline",
-  stretch: "items-stretch",
+const textAlignClasses = {
+  left: "text-left",
+  center: "text-center",
+  right: "text-right",
 }
 
 export function ResponsiveFlex({
@@ -205,12 +203,6 @@ const colorClasses = {
   warning: "text-yellow-600",
 }
 
-const alignClasses = {
-  left: "text-left",
-  center: "text-center",
-  right: "text-right",
-}
-
 export function ResponsiveText({
   children,
   className,
@@ -233,7 +225,7 @@ export function ResponsiveText({
         textSize,
         weightClasses[weight],
         colorClasses[color],
-        alignClasses[align],
+        textAlignClasses[align],
         className
       )}
     >
