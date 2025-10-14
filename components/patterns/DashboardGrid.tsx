@@ -183,21 +183,22 @@ export function QuickActions({
   className?: string
 }) {
   return (
-    <div className={cn("grid grid-cols-2 gap-2", className)}>
+    <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4", className)}>
       {actions.map((action) => (
         <button
           key={action.id}
           onClick={action.onClick}
           className={cn(
-            "flex flex-col items-center space-y-2 p-4 rounded-lg border transition-colors",
-            "hover:bg-accent hover:text-accent-foreground",
+            "flex flex-col items-center space-y-2 p-3 md:p-4 rounded-lg border transition-all duration-200",
+            "hover:bg-accent hover:text-accent-foreground hover:shadow-md",
             "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "active:scale-95",
             action.variant === "outline" && "border-border",
             action.variant === "secondary" && "bg-secondary text-secondary-foreground"
           )}
         >
-          {action.icon}
-          <span className="text-sm font-medium">{action.label}</span>
+          <div className="text-primary">{action.icon}</div>
+          <span className="text-xs md:text-sm font-medium text-center">{action.label}</span>
         </button>
       ))}
     </div>

@@ -12,29 +12,41 @@ import {
   AlertCircle,
   Plus,
   FileText,
-  BarChart3
+  BarChart3,
+  Activity,
+  Settings,
+  Bell
 } from "lucide-react";
 
-// Import new components
+// Import shadcn/ui components
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Import existing components
 import { StatsCard, AttendanceStatsCard, EmployeeStatsCard, LateStatsCard } from "@/components/patterns/StatsCard";
 import { DashboardGrid, KpiRow, WidgetCard, ActivityTimeline, QuickActions, ResponsiveDashboard } from "@/components/patterns/DashboardGrid";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { DashboardSkeleton } from "@/components/loading/Skeletons";
 import { useApi } from "@/lib/hooks/useApi";
 import { useUIStore } from "@/lib/store/uiStore";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Import existing components
+import { usePerformance } from "@/hooks/use-performance";
 import AbsenceButton from "@/components/AbsenceButton";
 import CutiModal from "@/components/CutiModal";
+import { MobileDashboardNav } from "@/components/mobile/mobile-dashboard-nav";
+import { OptimizedChart } from "@/components/charts/optimized-chart";
+import { ResponsiveContainer, ResponsiveGrid, ResponsiveText } from "@/components/responsive/responsive-container";
 import { getCurrentUserCached, getAttendanceStatsCached, getUserLeaveStatsCached } from "@/lib/actions";
 
 export default function KaryawanDashboard() {
   const [user, setUser] = useState({ id: null, name: "" });
   const { setPageTitle, setPageDescription } = useUIStore();
+  const { shouldReduceAnimations, isMobile, isTablet } = usePerformance();
 
   // API hooks for data fetching
   const { data: dashboardStats, loading: statsLoading } = useApi(
@@ -108,42 +120,79 @@ export default function KaryawanDashboard() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto p-6 space-y-6">
+        {/* Mobile Navigation */}
+        <MobileDashboardNav />
+        
+        <ResponsiveContainer variant="default" mobileFirst>
           {/* Header */}
           <motion.header
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5 }}
+            initial={shouldReduceAnimations() ? false : { y: -20, opacity: 0 }}
+            animate={shouldReduceAnimations() ? false : { y: 0, opacity: 1 }}
+            transition={shouldReduceAnimations() ? {} : { duration: 0.5 }}
             className="text-center space-y-2"
           >
-            <h1 className="text-3xl font-bold text-foreground">
-              Selamat Datang, {user.name} 👋
-            </h1>
-            <p className="text-muted-foreground">Dashboard Karyawan - Overview kehadiran dan produktivitas</p>
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src="/placeholder-avatar.jpg" />
+                <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
+                  {user.name?.charAt(0) || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="text-left">
+                <ResponsiveText size="2xl" className="font-bold text-foreground">
+                  Selamat Datang, {user.name} 👋
+                </ResponsiveText>
+                <ResponsiveText size="sm" className="text-muted-foreground">
+                  Dashboard Karyawan
+                </ResponsiveText>
+              </div>
+            </div>
+            <ResponsiveText size="xs" className="text-muted-foreground">
+              Overview kehadiran dan produktivitas
+            </ResponsiveText>
           </motion.header>
 
-          {/* Quick Actions */}
+          {/* Quick Actions - Mobile Optimized */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
+            initial={shouldReduceAnimations() ? false : { opacity: 0, y: 20 }}
+            animate={shouldReduceAnimations() ? false : { opacity: 1, y: 0 }}
+            transition={shouldReduceAnimations() ? {} : { delay: 0.2, duration: 0.5 }}
           >
-            <WidgetCard title="Quick Actions" description="Akses cepat ke fitur utama">
-              <QuickActions actions={quickActions} />
-            </WidgetCard>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Quick Actions</CardTitle>
+                <CardDescription>Akses cepat ke fitur utama</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+                  {quickActions.map((action) => (
+                    <Button
+                      key={action.id}
+                      variant="outline"
+                      className="h-auto p-3 md:p-4 flex flex-col items-center gap-2 hover:bg-accent"
+                      onClick={action.onClick}
+                    >
+                      <div className="text-primary">{action.icon}</div>
+                      <span className="text-xs md:text-sm font-medium">{action.label}</span>
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
 
-          {/* KPI Row */}
+          {/* KPI Row - Mobile Optimized */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
+            initial={shouldReduceAnimations() ? false : { opacity: 0, y: 20 }}
+            animate={shouldReduceAnimations() ? false : { opacity: 1, y: 0 }}
+            transition={shouldReduceAnimations() ? {} : { delay: 0.3, duration: 0.5 }}
           >
-            <KpiRow>
+            <ResponsiveGrid cols={{ mobile: 1, tablet: 2, desktop: 4, wide: 4 }}>
               <AttendanceStatsCard
                 present={dashboardStats?.presentToday || 0}
                 total={dashboardStats?.totalEmployees || 0}
                 loading={statsLoading}
+                className="col-span-1"
               />
               <StatsCard
                 title="Jam Kerja Hari Ini"
@@ -151,11 +200,13 @@ export default function KaryawanDashboard() {
                 description="Rata-rata check-in"
                 icon={Clock}
                 loading={statsLoading}
+                className="col-span-1"
               />
               <LateStatsCard
                 count={dashboardStats?.lateToday || 0}
                 total={dashboardStats?.totalEmployees || 0}
                 loading={statsLoading}
+                className="col-span-1"
               />
               <StatsCard
                 title="Produktivitas"
@@ -169,151 +220,183 @@ export default function KaryawanDashboard() {
                 }}
                 loading={statsLoading}
                 variant="success"
+                className="col-span-1"
               />
-            </KpiRow>
+            </ResponsiveGrid>
           </motion.div>
 
-          {/* Main Content Grid */}
-          <ResponsiveDashboard>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-              className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-            >
+          {/* Main Content Grid - Mobile First */}
+          <motion.div
+            initial={shouldReduceAnimations() ? false : { opacity: 0, y: 20 }}
+            animate={shouldReduceAnimations() ? false : { opacity: 1, y: 0 }}
+            transition={shouldReduceAnimations() ? {} : { delay: 0.4, duration: 0.5 }}
+            className="space-y-4 md:space-y-6"
+          >
+            {/* Attendance Actions - Priority on Mobile */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Aksi Kehadiran
+                </CardTitle>
+                <CardDescription>Kelola kehadiran Anda</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <AbsenceButton />
+                  <Separator />
+                  <CutiModal />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Main Grid - Responsive */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
               {/* Left Column - Charts and Data */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="lg:col-span-2 space-y-4 md:space-y-6">
                 {/* Attendance Chart */}
-                <WidgetCard
+                <OptimizedChart
                   title="Grafik Kehadiran"
                   description="Trend kehadiran 7 hari terakhir"
-                  actions={
-                    <Button variant="outline" size="sm">
-                      <BarChart3 className="h-4 w-4 mr-2" />
-                      Detail
-                    </Button>
-                  }
-                >
-                  {chartLoading ? (
-                    <div className="h-64 bg-muted animate-pulse rounded" />
-                  ) : (
-                    <div className="h-64 flex items-center justify-center text-muted-foreground">
-                      Chart placeholder - Integrate with chart library
-                    </div>
-                  )}
-                </WidgetCard>
+                  type="area"
+                  data={chartData?.datasets?.[0]?.data?.map((value, index) => ({
+                    name: chartData?.labels?.[index] || `Day ${index + 1}`,
+                    value: value,
+                  })) || []}
+                  height={300}
+                  loading={chartLoading}
+                  className="w-full"
+                />
 
                 {/* Attendance Table */}
-                <WidgetCard
-                  title="Data Kehadiran Hari Ini"
-                  description="Daftar kehadiran karyawan"
-                >
-                  <Tabs defaultValue="present" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="present">Hadir</TabsTrigger>
-                      <TabsTrigger value="late">Terlambat</TabsTrigger>
-                      <TabsTrigger value="absent">Tidak Hadir</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="present" className="space-y-2">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                              <CheckCircle className="h-4 w-4 text-green-600" />
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Data Kehadiran Hari Ini</CardTitle>
+                    <CardDescription>Daftar kehadiran karyawan</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Tabs defaultValue="present" className="w-full">
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="present" className="text-xs">Hadir</TabsTrigger>
+                        <TabsTrigger value="late" className="text-xs">Terlambat</TabsTrigger>
+                        <TabsTrigger value="absent" className="text-xs">Tidak Hadir</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="present" className="space-y-2 mt-4">
+                        <ScrollArea className="h-64">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 border rounded-lg mb-2">
+                              <div className="flex items-center space-x-3">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback className="bg-green-100 text-green-600">
+                                    <CheckCircle className="h-4 w-4" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium text-sm">Employee {i + 1}</p>
+                                  <p className="text-xs text-muted-foreground">08:15</p>
+                                </div>
+                              </div>
+                              <Badge variant="secondary" className="text-xs">On Time</Badge>
                             </div>
-                            <div>
-                              <p className="font-medium">Employee {i + 1}</p>
-                              <p className="text-sm text-muted-foreground">08:15</p>
+                          ))}
+                        </ScrollArea>
+                      </TabsContent>
+                      <TabsContent value="late" className="space-y-2 mt-4">
+                        <ScrollArea className="h-64">
+                          {Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 border rounded-lg mb-2">
+                              <div className="flex items-center space-x-3">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback className="bg-yellow-100 text-yellow-600">
+                                    <AlertCircle className="h-4 w-4" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium text-sm">Employee {i + 10}</p>
+                                  <p className="text-xs text-muted-foreground">08:45</p>
+                                </div>
+                              </div>
+                              <Badge variant="destructive" className="text-xs">30 min late</Badge>
                             </div>
-                          </div>
-                          <Badge variant="secondary">On Time</Badge>
-                        </div>
-                      ))}
-                    </TabsContent>
-                    <TabsContent value="late" className="space-y-2">
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                              <AlertCircle className="h-4 w-4 text-yellow-600" />
+                          ))}
+                        </ScrollArea>
+                      </TabsContent>
+                      <TabsContent value="absent" className="space-y-2 mt-4">
+                        <ScrollArea className="h-64">
+                          {Array.from({ length: 2 }).map((_, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 border rounded-lg mb-2">
+                              <div className="flex items-center space-x-3">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback className="bg-red-100 text-red-600">
+                                    <XCircle className="h-4 w-4" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium text-sm">Employee {i + 20}</p>
+                                  <p className="text-xs text-muted-foreground">No check-in</p>
+                                </div>
+                              </div>
+                              <Badge variant="outline" className="text-xs">Absent</Badge>
                             </div>
-                            <div>
-                              <p className="font-medium">Employee {i + 10}</p>
-                              <p className="text-sm text-muted-foreground">08:45</p>
-                            </div>
-                          </div>
-                          <Badge variant="destructive">30 min late</Badge>
-                        </div>
-                      ))}
-                    </TabsContent>
-                    <TabsContent value="absent" className="space-y-2">
-                      {Array.from({ length: 2 }).map((_, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                              <XCircle className="h-4 w-4 text-red-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium">Employee {i + 20}</p>
-                              <p className="text-sm text-muted-foreground">No check-in</p>
-                            </div>
-                          </div>
-                          <Badge variant="outline">Absent</Badge>
-                        </div>
-                      ))}
-                    </TabsContent>
-                  </Tabs>
-                </WidgetCard>
+                          ))}
+                        </ScrollArea>
+                      </TabsContent>
+                    </Tabs>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Right Column - Activities and Info */}
-              <div className="space-y-6">
+              <div className="space-y-4 md:space-y-6">
                 {/* Recent Activities */}
-                <WidgetCard
-                  title="Aktivitas Terbaru"
-                  description="Update terbaru dari sistem"
-                >
-                  <ActivityTimeline
-                    activities={recentActivities || []}
-                    loading={activitiesLoading}
-                  />
-                </WidgetCard>
-
-                {/* Attendance Actions */}
-                <WidgetCard
-                  title="Aksi Kehadiran"
-                  description="Kelola kehadiran Anda"
-                >
-                  <div className="space-y-4">
-                    <AbsenceButton />
-                    <CutiModal />
-                  </div>
-                </WidgetCard>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Bell className="h-5 w-5" />
+                      Aktivitas Terbaru
+                    </CardTitle>
+                    <CardDescription>Update terbaru dari sistem</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-64">
+                      <ActivityTimeline
+                        activities={recentActivities || []}
+                        loading={activitiesLoading}
+                      />
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
 
                 {/* System Status */}
-                <WidgetCard
-                  title="Status Sistem"
-                  description="Informasi sistem saat ini"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Server Status</span>
-                      <Badge variant="default">Online</Badge>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Settings className="h-5 w-5" />
+                      Status Sistem
+                    </CardTitle>
+                    <CardDescription>Informasi sistem saat ini</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Server Status</span>
+                        <Badge variant="default">Online</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Database</span>
+                        <Badge variant="default">Connected</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Last Sync</span>
+                        <span className="text-xs text-muted-foreground">2 min ago</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Database</span>
-                      <Badge variant="default">Connected</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Last Sync</span>
-                      <span className="text-xs text-muted-foreground">2 min ago</span>
-                    </div>
-                  </div>
-                </WidgetCard>
+                  </CardContent>
+                </Card>
               </div>
-            </motion.div>
-          </ResponsiveDashboard>
-        </div>
+            </div>
+          </motion.div>
+        </ResponsiveContainer>
       </div>
     </ErrorBoundary>
   );

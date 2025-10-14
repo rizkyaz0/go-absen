@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { getCurrentUserCached, getAbsencesByUserCached, toggleAbsenceAction } from "@/lib/actions";
 import { toZonedTime, format } from 'date-fns-tz';
 import { showErrorToast, showAbsenceCheckInToast, showAbsenceCheckOutToast } from "@/lib/toast-utils";
@@ -178,53 +182,102 @@ export default function AbsenceButton() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 items-center w-full">
-        <div className="text-center space-y-2">
-          <div className="h-6 w-48 bg-muted animate-pulse rounded" />
-          <div className="h-8 w-32 bg-muted animate-pulse rounded mx-auto" />
-        </div>
-        <div className="h-12 w-full sm:w-48 bg-muted animate-pulse rounded" />
-      </div>
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="text-center space-y-2">
+              <Skeleton className="h-6 w-48 mx-auto" />
+              <Skeleton className="h-8 w-32 mx-auto" />
+            </div>
+            <Skeleton className="h-12 w-full" />
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6 items-center w-full">
-      <div className="text-center space-y-2">
-        <p className="text-lg font-semibold text-white">{tanggalDisplay}</p>
-        <p className="text-3xl font-bold text-white">{jamDisplay} WIB</p>
-      </div>
+    <Card className="w-full">
+      <CardContent className="p-4 md:p-6">
+        <div className="flex flex-col items-center space-y-4">
+          {/* Date and Time Display */}
+          <div className="text-center space-y-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <p className="text-sm font-medium">{tanggalDisplay}</p>
+            </div>
+            <p className="text-2xl md:text-3xl font-bold text-foreground">
+              {jamDisplay} WIB
+            </p>
+          </div>
 
-      {/* Tombol Absen Toggle */}
-      {!sudahPulang && (
-        <Button
-          onClick={handleToggleAbsence}
-          disabled={actionLoading}
-          size="lg"
-          className={`w-full sm:w-auto transition-all duration-200 ${
-            sudahMasuk 
-              ? "bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600" 
-              : "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
-          }`}
-        >
-          {actionLoading ? (
-            <>
-              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              Memproses...
-            </>
-          ) : (
-            sudahMasuk ? "Absen Pulang" : "Absen Masuk"
+          {/* Attendance Button */}
+          {!sudahPulang && (
+            <Button
+              onClick={handleToggleAbsence}
+              disabled={actionLoading}
+              size="lg"
+              className={`w-full transition-all duration-200 ${
+                sudahMasuk 
+                  ? "bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600" 
+                  : "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+              }`}
+            >
+              {actionLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Memproses...
+                </>
+              ) : (
+                <>
+                  {sudahMasuk ? (
+                    <>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Absen Pulang
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Absen Masuk
+                    </>
+                  )}
+                </>
+              )}
+            </Button>
           )}
-        </Button>
-      )}
 
-      {/* Status Absen */}
-      {sudahMasuk && sudahPulang && (
-        <div className="flex items-center gap-2 text-green-600 font-semibold">
-          <div className="h-2 w-2 bg-green-500 rounded-full" />
-          Anda sudah selesai absen hari ini
+          {/* Status Display */}
+          {sudahMasuk && !sudahPulang && (
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">Sudah check-in</span>
+            </div>
+          )}
+
+          {sudahMasuk && sudahPulang && (
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">Selesai absen hari ini</span>
+            </div>
+          )}
+
+          {/* Status Badge */}
+          <div className="flex gap-2">
+            {sudahMasuk && (
+              <Badge variant="default" className="bg-green-100 text-green-800">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Check-in
+              </Badge>
+            )}
+            {sudahPulang && (
+              <Badge variant="default" className="bg-blue-100 text-blue-800">
+                <XCircle className="h-3 w-3 mr-1" />
+                Check-out
+              </Badge>
+            )}
+          </div>
         </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }
