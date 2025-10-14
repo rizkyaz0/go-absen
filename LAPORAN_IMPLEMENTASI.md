@@ -24,7 +24,19 @@
 - ⚠️ **Halaman Karyawan** - Menampilkan alert "fitur dalam pengembangan"
 - ⚠️ **Dashboard Admin** - Menampilkan alert "fitur dalam pengembangan"
 
-### 4. Komponen UI yang Ditambahkan
+### 4. Penyesuaian Perhitungan (Akurasi)
+- Zona waktu diseragamkan ke Asia/Jakarta saat agregasi (DATE_ADD(..., INTERVAL 7 HOUR)).
+- Kehadiran dihitung dari `checkIn IS NOT NULL` (bukan nilai `status`).
+- Terlambat dihitung jika `TIME(checkIn @ Jakarta) > 08:00:00`.
+- Absen mencakup `status IN ('Absen','Alpha')`.
+- Izin harian mencakup `status IN ('Izin','Sakit')` pada `Absence`.
+- Rekap bulanan, harian, dan ringkasan kini konsisten.
+
+### 5. Export dan Print
+- Export Excel sekarang menggunakan data yang sama dengan tampilan (ringkasan, bulanan, karyawan terlambat, harian) sehingga konsisten.
+- Print PDF menangkap seluruh elemen laporan via `html2canvas` dan `jsPDF`.
+
+### 6. Komponen UI yang Ditambahkan
 - **Alert Component** - Untuk menampilkan notifikasi status pengembangan
 - **Loading States** - Indikator loading saat mengambil data
 - **Error Handling** - Penanganan error yang lebih baik
@@ -48,8 +60,8 @@
 
 - Semua data diambil dari database real-time
 - Filter tanggal menggunakan parameter `startDate` dan `endDate`
-- Keterlambatan dihitung berdasarkan check-in setelah jam 8:00
-- Persentase kehadiran dihitung dari total absensi vs yang hadir
+- Keterlambatan dihitung berdasarkan check-in setelah jam 08:00 (WIB)
+- Persentase kehadiran = hadir / (hadir + absen)
 - Fitur export akan diimplementasikan di masa depan
 
 ## Status Proyek

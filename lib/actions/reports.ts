@@ -4,6 +4,7 @@
 import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
+import { toZonedTime } from 'date-fns-tz'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key'
 
@@ -20,13 +21,20 @@ export async function getSummaryReport(startDate?: string, endDate?: string) {
   try {
     await verifyToken()
 
-    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-    const end = endDate ? new Date(endDate) : new Date()
+    // Normalize input range to local date strings (Asia/Jakarta) and compare using local date in SQL
+    const timeZone = 'Asia/Jakarta'
+    const now = new Date()
+    const nowLocal = toZonedTime(now, timeZone)
+    const startYmd = startDate
+      ? startDate
+      : `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-01`
+    const endLocal = endDate
+      ? endDate
+      : `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`
 
-    // Use raw SQL for better performance and accurate calculations
+    // Use raw SQL with local-date comparisons and timezone-adjusted times
     const summaryData = await prisma.$queryRaw<Array<{
-      totalHariKerja: bigint;
-      totalAbsences: bigint;
+      totalHari: bigint;
       totalHadir: bigint;
       totalTerlambat: bigint;
       totalAbsen: bigint;
@@ -34,24 +42,51 @@ export async function getSummaryReport(startDate?: string, endDate?: string) {
       izinDitolak: bigint;
     }>>`
       SELECT 
-        DATEDIFF(${end}, ${start}) + 1 as totalHariKerja,
-        (SELECT COUNT(*) FROM Absence WHERE date >= ${start} AND date <= ${end}) as totalAbsences,
-        (SELECT COUNT(*) FROM Absence WHERE date >= ${start} AND date <= ${end} AND status = 'Hadir') as totalHadir,
-        (SELECT COUNT(*) FROM Absence WHERE date >= ${start} AND date <= ${end} AND status = 'Hadir' AND TIME(checkIn) > '08:00:00') as totalTerlambat,
-        (SELECT COUNT(*) FROM Absence WHERE date >= ${start} AND date <= ${end} AND status = 'Absen') as totalAbsen,
-        (SELECT COUNT(*) FROM LeaveRequest WHERE startDate >= ${start} AND startDate <= ${end} AND status = 'Approved') as izinDiterima,
-        (SELECT COUNT(*) FROM LeaveRequest WHERE startDate >= ${start} AND startDate <= ${end} AND status = 'Rejected') as izinDitolak
+        (DATEDIFF(${endLocal}, ${startYmd}) + 1) as totalHari,
+        (
+          SELECT COUNT(*) 
+          FROM Absence a
+          WHERE DATE(DATE_ADD(a.date, INTERVAL 7 HOUR)) BETWEEN ${startYmd} AND ${endLocal}
+            AND a.checkIn IS NOT NULL
+        ) as totalHadir,
+        (
+          SELECT COUNT(*) 
+          FROM Absence a
+          WHERE DATE(DATE_ADD(a.date, INTERVAL 7 HOUR)) BETWEEN ${startYmd} AND ${endLocal}
+            AND a.checkIn IS NOT NULL
+            AND TIME(DATE_ADD(a.checkIn, INTERVAL 7 HOUR)) > '08:00:00'
+        ) as totalTerlambat,
+        (
+          SELECT COUNT(*) 
+          FROM Absence a
+          WHERE DATE(DATE_ADD(a.date, INTERVAL 7 HOUR)) BETWEEN ${startYmd} AND ${endLocal}
+            AND a.status IN ('Absen', 'Alpha')
+        ) as totalAbsen,
+        (
+          SELECT COUNT(*) 
+          FROM LeaveRequest l
+          WHERE l.status = 'Approved'
+            AND DATE(DATE_ADD(l.startDate, INTERVAL 7 HOUR)) <= ${endLocal}
+            AND DATE(DATE_ADD(l.endDate, INTERVAL 7 HOUR)) >= ${startYmd}
+        ) as izinDiterima,
+        (
+          SELECT COUNT(*) 
+          FROM LeaveRequest l
+          WHERE l.status = 'Rejected'
+            AND DATE(DATE_ADD(l.startDate, INTERVAL 7 HOUR)) <= ${endLocal}
+            AND DATE(DATE_ADD(l.endDate, INTERVAL 7 HOUR)) >= ${startYmd}
+        ) as izinDitolak
     `
 
     const data = summaryData[0]
-    const totalHariKerja = Number(data.totalHariKerja)
+    const totalHariKerja = Number(data.totalHari)
     const totalHadir = Number(data.totalHadir)
     const totalTerlambat = Number(data.totalTerlambat)
     const totalAbsen = Number(data.totalAbsen)
     const izinDiterima = Number(data.izinDiterima)
     const izinDitolak = Number(data.izinDitolak)
 
-    // Calculate attendance percentage more accurately
+    // Attendance rate based on hadir vs (hadir + absen) to match monthly table logic
     const totalPossible = totalHadir + totalAbsen
     const rataRataKehadiran = totalPossible > 0 ? (totalHadir / totalPossible) * 100 : 0
 
@@ -75,10 +110,19 @@ export async function getDailyReport(startDate?: string, endDate?: string, limit
   try {
     await verifyToken()
 
-    const start = startDate ? new Date(startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    const end = endDate ? new Date(endDate) : new Date()
+    // Normalize to local date strings
+    const timeZone = 'Asia/Jakarta'
+    const now = new Date()
+    const nowLocal = toZonedTime(now, timeZone)
+    const defaultStartYmd = (() => {
+      const d = new Date(nowLocal)
+      d.setDate(d.getDate() - 6) // last 7 days inclusive
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    })()
+    const startYmd = startDate || defaultStartYmd
+    const endYmd = endDate || `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`
 
-    // Use raw SQL for better performance - fix status values based on schema
+    // Use raw SQL with timezone-adjusted grouping and comparisons; treat 'Izin' and 'Sakit' as leave days
     const dailyData = await prisma.$queryRaw<Array<{
       tanggal: string;
       hadir: bigint;
@@ -87,15 +131,15 @@ export async function getDailyReport(startDate?: string, endDate?: string, limit
       izin: bigint;
     }>>`
       SELECT 
-        DATE(a.date) as tanggal,
-        COALESCE(SUM(CASE WHEN a.status = 'Hadir' THEN 1 ELSE 0 END), 0) as hadir,
-        COALESCE(SUM(CASE WHEN a.status = 'Hadir' AND TIME(a.checkIn) > '08:00:00' THEN 1 ELSE 0 END), 0) as terlambat,
-        COALESCE(SUM(CASE WHEN a.status = 'Absen' THEN 1 ELSE 0 END), 0) as absen,
-        COALESCE(SUM(CASE WHEN a.status = 'Izin' THEN 1 ELSE 0 END), 0) as izin
+        DATE(DATE_ADD(a.date, INTERVAL 7 HOUR)) as tanggal,
+        COALESCE(SUM(CASE WHEN a.checkIn IS NOT NULL THEN 1 ELSE 0 END), 0) as hadir,
+        COALESCE(SUM(CASE WHEN a.checkIn IS NOT NULL AND TIME(DATE_ADD(a.checkIn, INTERVAL 7 HOUR)) > '08:00:00' THEN 1 ELSE 0 END), 0) as terlambat,
+        COALESCE(SUM(CASE WHEN a.status IN ('Absen', 'Alpha') THEN 1 ELSE 0 END), 0) as absen,
+        COALESCE(SUM(CASE WHEN a.status IN ('Izin', 'Sakit') THEN 1 ELSE 0 END), 0) as izin
       FROM Absence a
-      WHERE a.date >= ${start} AND a.date <= ${end}
-      GROUP BY DATE(a.date)
-      ORDER BY a.date DESC
+      WHERE DATE(DATE_ADD(a.date, INTERVAL 7 HOUR)) BETWEEN ${startYmd} AND ${endYmd}
+      GROUP BY DATE(DATE_ADD(a.date, INTERVAL 7 HOUR))
+      ORDER BY tanggal DESC
       LIMIT ${limit}
     `
 
@@ -125,7 +169,7 @@ export async function getMonthlyReport(year: number) {
   try {
     await verifyToken()
 
-    // Use raw SQL for better performance and proper month names - fix status values
+    // Use raw SQL with timezone-adjusted month extraction and presence/late logic
     const monthlyData = await prisma.$queryRaw<Array<{
       bulan: string;
       hadir: bigint;
@@ -148,15 +192,15 @@ export async function getMonthlyReport(year: number) {
           WHEN m.month_num = 11 THEN 'November'
           WHEN m.month_num = 12 THEN 'Desember'
         END as bulan,
-        COALESCE(SUM(CASE WHEN a.status = 'Hadir' THEN 1 ELSE 0 END), 0) as hadir,
-        COALESCE(SUM(CASE WHEN a.status = 'Hadir' AND TIME(a.checkIn) > '08:00:00' THEN 1 ELSE 0 END), 0) as terlambat,
-        COALESCE(SUM(CASE WHEN a.status = 'Absen' THEN 1 ELSE 0 END), 0) as absen,
+        COALESCE(SUM(CASE WHEN a.checkIn IS NOT NULL THEN 1 ELSE 0 END), 0) as hadir,
+        COALESCE(SUM(CASE WHEN a.checkIn IS NOT NULL AND TIME(DATE_ADD(a.checkIn, INTERVAL 7 HOUR)) > '08:00:00' THEN 1 ELSE 0 END), 0) as terlambat,
+        COALESCE(SUM(CASE WHEN a.status IN ('Absen', 'Alpha') THEN 1 ELSE 0 END), 0) as absen,
         COALESCE(SUM(CASE WHEN a.status = 'Izin' THEN 1 ELSE 0 END), 0) as izin
       FROM (
         SELECT 1 as month_num UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6
         UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
       ) m
-      LEFT JOIN Absence a ON MONTH(a.date) = m.month_num AND YEAR(a.date) = ${year}
+      LEFT JOIN Absence a ON MONTH(DATE_ADD(a.date, INTERVAL 7 HOUR)) = m.month_num AND YEAR(DATE_ADD(a.date, INTERVAL 7 HOUR)) = ${year}
       GROUP BY m.month_num
       ORDER BY m.month_num
     `
@@ -187,10 +231,18 @@ export async function getLateEmployeesReport(startDate?: string, endDate?: strin
   try {
     await verifyToken()
 
-    const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    const end = endDate ? new Date(endDate) : new Date()
+    const timeZone = 'Asia/Jakarta'
+    const now = new Date()
+    const nowLocal = toZonedTime(now, timeZone)
+    const defaultStartYmd = (() => {
+      const d = new Date(nowLocal)
+      d.setDate(d.getDate() - 30)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    })()
+    const startYmd = startDate || defaultStartYmd
+    const endYmd = endDate || `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`
 
-    // Get late employees with aggregated count using raw SQL for better performance
+    // Get late employees with aggregated count using timezone-adjusted logic
     const lateEmployees = await prisma.$queryRaw<Array<{
       id: number;
       nama: string;
@@ -205,15 +257,14 @@ export async function getLateEmployeesReport(startDate?: string, endDate?: strin
         u.email,
         r.name as roleName,
         COUNT(a.id) as totalTerlambat,
-        DATE_FORMAT(a.date, '%Y-%m') as bulan
+        DATE_FORMAT(DATE_ADD(a.date, INTERVAL 7 HOUR), '%Y-%m') as bulan
       FROM User u
       INNER JOIN Absence a ON u.id = a.userId
       INNER JOIN Role r ON u.roleId = r.id
-      WHERE a.date >= ${start}
-        AND a.date <= ${end}
-        AND a.status = 'Hadir'
-        AND TIME(a.checkIn) > '08:00:00'
-      GROUP BY u.id, u.name, u.email, r.name, DATE_FORMAT(a.date, '%Y-%m')
+      WHERE DATE(DATE_ADD(a.date, INTERVAL 7 HOUR)) BETWEEN ${startYmd} AND ${endYmd}
+        AND a.checkIn IS NOT NULL
+        AND TIME(DATE_ADD(a.checkIn, INTERVAL 7 HOUR)) > '08:00:00'
+      GROUP BY u.id, u.name, u.email, r.name, DATE_FORMAT(DATE_ADD(a.date, INTERVAL 7 HOUR), '%Y-%m')
       ORDER BY totalTerlambat DESC
       LIMIT ${limit}
     `
