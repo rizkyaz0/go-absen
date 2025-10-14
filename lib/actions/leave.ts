@@ -3,6 +3,7 @@
 import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { prisma } from '@/prisma'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
 
@@ -106,6 +107,13 @@ export async function createLeaveRequest(leaveData: {
       },
     })
 
+    // Invalidate cached dashboards and leave lists
+    revalidateTag('leave')
+    revalidateTag('requests')
+    revalidatePath('/admin/dashboard')
+    revalidatePath('/admin/dashboard/izin')
+    revalidatePath('/dashboard')
+
     return { success: true, data: leave }
   } catch (err) {
     console.error('Error creating leave request:', err)
@@ -130,6 +138,13 @@ export async function updateLeaveRequestStatus(id: number, status: 'Approved' | 
       },
     })
 
+    // Invalidate cached dashboards and leave lists
+    revalidateTag('leave')
+    revalidateTag('requests')
+    revalidatePath('/admin/dashboard')
+    revalidatePath('/admin/dashboard/izin')
+    revalidatePath('/dashboard')
+
     return { success: true, data: updated }
   } catch (err) {
     console.error('Error updating leave request:', err)
@@ -142,6 +157,14 @@ export async function deleteLeaveRequest(id: number) {
     await verifyToken()
 
     await prisma.leaveRequest.delete({ where: { id } })
+
+    // Invalidate cached dashboards and leave lists
+    revalidateTag('leave')
+    revalidateTag('requests')
+    revalidatePath('/admin/dashboard')
+    revalidatePath('/admin/dashboard/izin')
+    revalidatePath('/dashboard')
+
     return { success: true, message: 'Permintaan cuti berhasil dihapus' }
   } catch (err) {
     console.error('Error deleting leave request:', err)

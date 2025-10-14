@@ -5,6 +5,7 @@ import { unstable_cache } from 'next/cache'
 import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key'
 
@@ -15,9 +16,14 @@ export async function loginUser(email: string, password: string) {
     }
 
     const user = await prisma.user.findUnique({ where: { email } })
-    if (!user || user.password !== password) {
+    if (!user) {
       return { error: 'Email atau password salah' }
     }
+
+    // Support both hashed and legacy plain passwords
+    const isHashed = typeof user.password === 'string' && user.password.startsWith('$2')
+    const passwordOk = isHashed ? await bcrypt.compare(password, user.password) : user.password === password
+    if (!passwordOk) return { error: 'Email atau password salah' }
 
     // Buat JWT token
     const token = jwt.sign(
@@ -48,6 +54,79 @@ export async function loginUser(email: string, password: string) {
   } catch (err) {
     console.error(err)
     return { error: 'Terjadi kesalahan server' }
+  }
+}
+
+export async function registerUser(params: {
+  name: string
+  email: string
+  password: string
+}) {
+  try {
+    const { name, email, password } = params
+    if (!name || !email || !password) {
+      return { error: 'Semua field wajib diisi' }
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email } })
+    if (existing) {
+      return { error: 'Email sudah terdaftar' }
+    }
+
+    const hashed = await bcrypt.hash(password, 10)
+
+    // Ensure default Role (Developer) and Status (Active) exist
+    let role = await prisma.role.findFirst({ where: { name: 'Developer' } })
+    if (!role) {
+      role = await prisma.role.upsert({
+        where: { id: 2 },
+        update: { name: 'Developer' },
+        create: { id: 2, name: 'Developer' },
+      })
+    }
+
+    let status = await prisma.status.findFirst({ where: { name: 'Active' } })
+    if (!status) {
+      status = await prisma.status.upsert({
+        where: { id: 1 },
+        update: { name: 'Active' },
+        create: { id: 1, name: 'Active' },
+      })
+    }
+
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashed,
+        roleId: role.id,
+        statusId: status.id,
+      },
+    })
+
+    // Auto login after registration
+    const token = jwt.sign(
+      { userId: user.id, roleId: user.roleId },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    )
+
+    const cookieStore = await cookies()
+    cookieStore.set({
+      name: 'token',
+      value: token,
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24,
+    })
+
+    const redirectUrl = '/dashboard'
+    return { success: true, message: 'Registrasi berhasil', redirectUrl }
+  } catch (err) {
+    console.error('Register error:', err)
+    return { error: 'Gagal registrasi' }
   }
 }
 

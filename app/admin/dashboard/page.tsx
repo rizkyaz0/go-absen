@@ -30,6 +30,7 @@ import {
 } from "@/lib/actions";
 import { showErrorToast, showDataLoadedToast } from "@/lib/toast-utils";
 import { Toaster } from "@/components/ui/sonner";
+import { toZonedTime, format as tzFormat } from 'date-fns-tz'
 
 interface Absence {
   id: number;
@@ -153,23 +154,28 @@ export default function AdminDashboard() {
   }, []);
 
   const calculateStats = (usersData: User[], absencesData: Absence[], leaveData: LeaveRequest[]) => {
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0];
+    const timeZone = 'Asia/Jakarta'
+    const now = new Date()
+    const todayStringLocal = tzFormat(toZonedTime(now, timeZone), 'yyyy-MM-dd', { timeZone })
     
-    // Filter data for today
+    // Filter data for today in local (WIB)
     const absensiHariIni = absencesData.filter((a) => {
-      const absenceDate = new Date(a.date);
-      const absenceDateString = absenceDate.toISOString().split('T')[0];
-      return absenceDateString === todayString;
-    });
+      const absenceDate = new Date(a.date as unknown as string)
+      const absenceLocal = toZonedTime(absenceDate, timeZone)
+      const absenceDateStringLocal = tzFormat(absenceLocal, 'yyyy-MM-dd', { timeZone })
+      return absenceDateStringLocal === todayStringLocal
+    })
 
-    const hadirHariIni = absensiHariIni.filter((a) => a.checkIn !== null).length;
+    const hadirHariIni = absensiHariIni.filter((a) => a.checkIn !== null).length
     const terlambatHariIni = absensiHariIni.filter((a) => {
-      if (!a.checkIn) return false;
-      const checkInTime = new Date(a.checkIn);
-      const hours = checkInTime.getHours();
-      return hours > 8; // Terlambat jika check-in setelah jam 8
-    }).length;
+      if (!a.checkIn) return false
+      const checkInDate = new Date(a.checkIn as unknown as string)
+      const checkInLocal = toZonedTime(checkInDate, timeZone)
+      const hours = checkInLocal.getHours()
+      const minutes = checkInLocal.getMinutes()
+      // Late if after 08:00 local
+      return hours > 8 || (hours === 8 && minutes > 0)
+    }).length
 
     const totalKaryawan = usersData.length;
     const absenHariIni = totalKaryawan - hadirHariIni;
@@ -181,13 +187,13 @@ export default function AdminDashboard() {
     const rejectedIzin = leaveData.filter(l => l.status === 'Rejected').length;
 
     // Calculate average attendance for the last 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     
     const recentAbsences = absencesData.filter((a) => {
-      const absenceDate = new Date(a.date);
-      return absenceDate >= thirtyDaysAgo;
-    });
+      const absenceDate = new Date(a.date as unknown as string)
+      return absenceDate >= thirtyDaysAgo
+    })
 
     const totalAbsences = recentAbsences.length;
     const totalPresent = recentAbsences.filter(a => a.checkIn !== null).length;
@@ -241,27 +247,25 @@ export default function AdminDashboard() {
 
   // Helper functions
   const formatTimeDisplay = (time?: string | Date | null) => {
-    if (!time) return "-";
-    
-    if (time instanceof Date) {
-      const localTime = new Date(time.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-      return localTime.toTimeString().slice(0, 5);
-    } else if (typeof time === 'string') {
-      return time;
-    }
-    
-    return "-";
-  };
+    if (!time) return "-"
+    const timeZone = 'Asia/Jakarta'
+    const d = time instanceof Date ? time : new Date(time)
+    if (Number.isNaN(d.getTime())) return '-'
+    const local = toZonedTime(d, timeZone)
+    return tzFormat(local, 'HH:mm', { timeZone })
+  }
 
 
   // Filter data for today
-  const today = new Date();
-  const todayString = today.toISOString().split('T')[0];
+  const timeZone = 'Asia/Jakarta'
+  const today = new Date()
+  const todayStringLocal = tzFormat(toZonedTime(today, timeZone), 'yyyy-MM-dd', { timeZone })
   const absensiHariIni = absences.filter((a) => {
-    const absenceDate = new Date(a.date);
-    const absenceDateString = absenceDate.toISOString().split('T')[0];
-    return absenceDateString === todayString;
-  });
+    const absenceDate = new Date(a.date as unknown as string)
+    const absenceLocal = toZonedTime(absenceDate, timeZone)
+    const absenceDateStringLocal = tzFormat(absenceLocal, 'yyyy-MM-dd', { timeZone })
+    return absenceDateStringLocal === todayStringLocal
+  })
 
   const recentAbsensi = absensiHariIni.slice(0, 5);
   const recentLeaveRequests = leaveRequests.filter(l => l.status === 'Pending').slice(0, 5);
@@ -410,8 +414,8 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 recentAbsensi.map((item) => {
-                  const checkInTime = item.checkIn ? new Date(item.checkIn) : null;
-                  const isLate = checkInTime && checkInTime.getHours() > 8;
+                  const checkInTime = item.checkIn ? new Date(item.checkIn as unknown as string) : null;
+                  const isLate = !!(checkInTime && (toZonedTime(checkInTime, 'Asia/Jakarta').getHours() > 8 || (toZonedTime(checkInTime, 'Asia/Jakarta').getHours() === 8 && toZonedTime(checkInTime, 'Asia/Jakarta').getMinutes() > 0)));
                   
                   return (
                     <div
