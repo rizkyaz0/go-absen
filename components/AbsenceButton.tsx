@@ -6,14 +6,14 @@ import { getCurrentUserCached, getAbsencesByUserCached, toggleAbsenceAction } fr
 import { toZonedTime, format } from 'date-fns-tz';
 import { showErrorToast, showAbsenceCheckInToast, showAbsenceCheckOutToast } from "@/lib/toast-utils";
 
-interface Absence {
+type Absence = {
   id: number;
   userId: number;
-  date: string;
-  checkIn?: string | null;
-  checkOut?: string | null;
+  date: string | Date;
+  checkIn?: string | Date | null;
+  checkOut?: string | Date | null;
   status: string;
-}
+};
 
 export default function AbsenceButton() {
   const [sudahMasuk, setSudahMasuk] = useState(false);
@@ -25,19 +25,7 @@ export default function AbsenceButton() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Safe date formatter with timezone support
-  const formatDate = (date?: string | Date | number | null) => {
-    if (!date) return "-";
-    const d = date instanceof Date ? date : new Date(date as string | number);
-    if (Number.isNaN(d.getTime())) return "-";
-    
-    // Convert UTC date to Asia/Jakarta timezone for display
-    const localDate = toZonedTime(d, 'Asia/Jakarta');
-    const day = String(localDate.getDate()).padStart(2, "0");
-    const month = String(localDate.getMonth() + 1).padStart(2, "0");
-    const year = localDate.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
+  // Safe date formatter with timezone support (kept only if needed in future)
 
   // Ambil info user login
   useEffect(() => {
@@ -96,9 +84,11 @@ export default function AbsenceButton() {
           const localTime = toZonedTime(now, 'Asia/Jakarta');
           const todayDateString = format(localTime, 'yyyy-MM-dd', { timeZone: 'Asia/Jakarta' });
 
-          const todayAbsence = absences.find(
-            (a: Absence) => a.userId === userId && formatDate(a.date) === formatDate(todayDateString)
-          );
+          const todayAbsence = absences.find((a: Absence) => {
+            // Compare by local Asia/Jakarta date to avoid timezone mismatch
+            const aDateLocal = format(toZonedTime(new Date(a.date), 'Asia/Jakarta'), 'yyyy-MM-dd', { timeZone: 'Asia/Jakarta' })
+            return a.userId === userId && aDateLocal === todayDateString
+          });
 
           if (todayAbsence) {
             setAbsenceId(todayAbsence.id);

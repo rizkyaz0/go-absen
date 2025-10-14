@@ -22,7 +22,6 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   Eye,
   Edit,
   Trash2
@@ -42,9 +41,9 @@ interface Absence {
     email?: string;
   };
   shiftId?: number | null;
-  date: string; // format: YYYY-MM-DD
-  checkIn?: string | null; // format: HH:MM:SS
-  checkOut?: string | null; // format: HH:MM:SS
+  date: string | Date;
+  checkIn?: string | Date | null;
+  checkOut?: string | Date | null;
   status: "Hadir" | "Absen" | "Pulang";
   note?: string;
   createdAt?: string | Date;
@@ -66,8 +65,31 @@ export default function AbsensiPage() {
         setLoading(true);
         const result = await getAllAbsencesCached();
         if ('success' in result && result.success) {
-          setAbsences(result.data);
-          setFilteredAbsences(result.data);
+          const normalized: Absence[] = (result.data as Array<{
+            id: number;
+            user: Absence['user'];
+            shiftId?: number | null;
+            date: string | Date;
+            checkIn?: string | Date | null;
+            checkOut?: string | Date | null;
+            status: string;
+            note?: string | null;
+            createdAt?: string | Date;
+            updatedAt?: string | Date;
+          }>).map((a) => ({
+            id: a.id,
+            user: a.user,
+            shiftId: a.shiftId ?? null,
+            date: a.date,
+            checkIn: a.checkIn ?? null,
+            checkOut: a.checkOut ?? null,
+            status: (a.status as string) as Absence['status'],
+            note: a.note ?? undefined,
+            createdAt: a.createdAt,
+            updatedAt: a.updatedAt,
+          }))
+          setAbsences(normalized);
+          setFilteredAbsences(normalized);
           setLastUpdated(new Date());
           showSuccessToast("Data absensi berhasil dimuat", `${result.data.length} record ditemukan`);
         } else if ('error' in result) {
@@ -117,7 +139,30 @@ export default function AbsensiPage() {
       setLoading(true);
       const result = await getAllAbsencesCached();
       if ('success' in result && result.success) {
-        setAbsences(result.data);
+        const normalized: Absence[] = (result.data as Array<{
+          id: number;
+          user: Absence['user'];
+          shiftId?: number | null;
+          date: string | Date;
+          checkIn?: string | Date | null;
+          checkOut?: string | Date | null;
+          status: string;
+          note?: string | null;
+          createdAt?: string | Date;
+          updatedAt?: string | Date;
+        }>).map((a) => ({
+          id: a.id,
+          user: a.user,
+          shiftId: a.shiftId ?? null,
+          date: a.date,
+          checkIn: a.checkIn ?? null,
+          checkOut: a.checkOut ?? null,
+          status: (a.status as string) as Absence['status'],
+          note: a.note ?? undefined,
+          createdAt: a.createdAt,
+          updatedAt: a.updatedAt,
+        }))
+        setAbsences(normalized);
         setLastUpdated(new Date());
         showSuccessToast("Data berhasil diperbarui", "Data absensi telah di-refresh");
       }

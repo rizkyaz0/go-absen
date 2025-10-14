@@ -8,14 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+// Table components reserved for future server-table refactor
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,18 +16,15 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Calendar, 
   Clock, 
-  Users, 
   Search, 
   Filter, 
   RefreshCw,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   Eye,
   Check,
   X,
-  FileText,
-  User
+  FileText
 } from "lucide-react";
 import { getAllLeaveRequests, updateLeaveRequestStatus } from "@/lib/actions";
 import { showErrorToast, showLeaveStatusUpdatedToast, showSuccessToast } from "@/lib/toast-utils";
@@ -50,8 +40,8 @@ interface Izin {
     email?: string;
   };
   type: string;
-  startDate: string;
-  endDate: string;
+  startDate: string | Date;
+  endDate: string | Date;
   status: "Pending" | "Approved" | "Rejected";
   reason?: string;
   createdAt?: string | Date;
@@ -74,8 +64,13 @@ export default function IzinPage() {
         setLoading(true);
         const result = await getAllLeaveRequests();
         if (result.success) {
-          setIzinData(result.data);
-          setFilteredIzin(result.data);
+          const normalized: Izin[] = (result.data as Array<Izin | (Izin & { startDate: Date; endDate: Date })>).map((l) => ({
+            ...l,
+            startDate: l.startDate,
+            endDate: l.endDate,
+          }))
+          setIzinData(normalized);
+          setFilteredIzin(normalized);
           setLastUpdated(new Date());
           showSuccessToast("Data izin berhasil dimuat", `${result.data.length} permintaan ditemukan`);
         } else if ('error' in result) {
@@ -120,7 +115,12 @@ export default function IzinPage() {
       setLoading(true);
       const result = await getAllLeaveRequests();
       if (result.success) {
-        setIzinData(result.data);
+        const normalized: Izin[] = (result.data as Array<Izin | (Izin & { startDate: Date; endDate: Date })>).map((l) => ({
+          ...l,
+          startDate: l.startDate,
+          endDate: l.endDate,
+        }))
+        setIzinData(normalized);
         setLastUpdated(new Date());
         showSuccessToast("Data berhasil diperbarui", "Data izin telah di-refresh");
       }
@@ -199,9 +199,9 @@ export default function IzinPage() {
     return d.toLocaleDateString('id-ID');
   };
 
-  const calculateDays = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+  const calculateDays = (startDate: string | Date, endDate: string | Date) => {
+    const start = startDate instanceof Date ? startDate : new Date(startDate);
+    const end = endDate instanceof Date ? endDate : new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     return diffDays;

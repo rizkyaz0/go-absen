@@ -9,19 +9,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+// Table components reserved for future server-table refactor
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ActionButton } from "@/components/ActionButton";
+// import { ActionButton } from "@/components/ActionButton";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { 
   Users, 
@@ -134,16 +127,7 @@ export default function KaryawanPage() {
     }
   };
 
-  const roleMap: Record<number, string> = {
-    1: "Project Manager",
-    2: "Developer",
-    3: "Admin",
-  };
-
-  const statusMap: Record<number, string> = {
-    1: "Active",
-    2: "Inactive",
-  };
+  // roleMap and statusMap are defined inline in helpers below
 
   // Navigasi ke halaman tambah karyawan
   const handleAdd = () => {

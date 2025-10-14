@@ -113,7 +113,11 @@ export default function AdminDashboard() {
           
           // Process absences data
           if ('success' in absencesResult && absencesResult.success) {
-            setAbsences(absencesResult.data);
+            const normalized: Absence[] = (absencesResult.data as Array<Absence | (Absence & { status: string })>).map((a) => ({
+              ...a,
+              status: a.status as Absence['status'],
+            }))
+            setAbsences(normalized);
             showDataLoadedToast("Absensi", absencesResult.data.length);
           } else if ('error' in absencesResult) {
             showErrorToast("Gagal memuat data absensi", absencesResult.error);
@@ -121,7 +125,11 @@ export default function AdminDashboard() {
 
           // Process leave requests data
           if ('success' in leaveResult && leaveResult.success) {
-            setLeaveRequests(leaveResult.data);
+            const normalizedLeaves: LeaveRequest[] = (leaveResult.data as Array<LeaveRequest | (LeaveRequest & { status: string })>).map((l) => ({
+              ...l,
+              status: l.status as LeaveRequest['status'],
+            }))
+            setLeaveRequests(normalizedLeaves);
             showDataLoadedToast("Permintaan Izin", leaveResult.data.length);
           } else if ('error' in leaveResult) {
             showErrorToast("Gagal memuat data izin", leaveResult.error);
@@ -130,8 +138,18 @@ export default function AdminDashboard() {
           // Calculate stats
           calculateStats(
             ('success' in usersResult && usersResult.success) ? usersResult.data || [] : [],
-            ('success' in absencesResult && absencesResult.success) ? absencesResult.data || [] : [],
-            ('success' in leaveResult && leaveResult.success) ? leaveResult.data || [] : []
+            ('success' in absencesResult && absencesResult.success)
+              ? ((absencesResult.data as Array<Absence | (Absence & { status: string })>).map((a) => ({
+                  ...a,
+                  status: a.status as Absence['status'],
+                })) as Absence[])
+              : [],
+            ('success' in leaveResult && leaveResult.success)
+              ? ((leaveResult.data as Array<LeaveRequest | (LeaveRequest & { status: string })>).map((l) => ({
+                  ...l,
+                  status: l.status as LeaveRequest['status'],
+                })) as LeaveRequest[])
+              : []
           );
           setLastUpdated(new Date());
         }
@@ -219,16 +237,34 @@ export default function AdminDashboard() {
         // Users data processed in calculateStats
       }
       if ('success' in absencesResult && absencesResult.success) {
-        setAbsences(absencesResult.data);
+        const normalized: Absence[] = (absencesResult.data as Array<Absence | (Absence & { status: string })>).map((a) => ({
+          ...a,
+          status: a.status as Absence['status'],
+        }))
+        setAbsences(normalized);
       }
       if ('success' in leaveResult && leaveResult.success) {
-        setLeaveRequests(leaveResult.data);
+        const normalizedLeaves: LeaveRequest[] = (leaveResult.data as Array<LeaveRequest | (LeaveRequest & { status: string })>).map((l) => ({
+          ...l,
+          status: l.status as LeaveRequest['status'],
+        }))
+        setLeaveRequests(normalizedLeaves);
       }
 
       calculateStats(
         ('success' in usersResult && usersResult.success) ? usersResult.data || [] : [],
-        ('success' in absencesResult && absencesResult.success) ? absencesResult.data || [] : [],
-        ('success' in leaveResult && leaveResult.success) ? leaveResult.data || [] : []
+        ('success' in absencesResult && absencesResult.success)
+          ? ((absencesResult.data as Array<Absence | (Absence & { status: string })>).map((a) => ({
+              ...a,
+              status: a.status as Absence['status'],
+            })) as Absence[])
+          : [],
+        ('success' in leaveResult && leaveResult.success)
+          ? ((leaveResult.data as Array<LeaveRequest | (LeaveRequest & { status: string })>).map((l) => ({
+              ...l,
+              status: l.status as LeaveRequest['status'],
+            })) as LeaveRequest[])
+          : []
       );
       setLastUpdated(new Date());
     } catch (err) {

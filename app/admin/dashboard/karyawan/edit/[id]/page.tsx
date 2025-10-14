@@ -46,9 +46,11 @@ export default function EditKaryawanPage() {
         }
         
         const data = result.data;
-        setName(data.name);
-        setRoleId(data.roleId);
-        setStatusId(data.statusId);
+        if (data) {
+          setName(data.name);
+          setRoleId(data.roleId);
+          setStatusId(data.statusId);
+        }
       } catch (error) {
         showErrorToast("Gagal mengambil data karyawan", (error as Error).message);
       } finally {

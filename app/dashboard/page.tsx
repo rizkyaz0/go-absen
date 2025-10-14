@@ -11,7 +11,7 @@ import { getCurrentUserCached, getAttendanceStatsCached, getUserLeaveStatsCached
 import { Toaster } from "@/components/ui/sonner";
 
 export default function KaryawanDashboard() {
-  const [user, setUser] = useState({ id: null, name: "" });
+  const [user, setUser] = useState<{ id: number | null; name: string }>({ id: null, name: "" });
 
   useEffect(() => {
     async function fetchUser() {
@@ -21,7 +21,7 @@ export default function KaryawanDashboard() {
           console.error(result.error);
           return;
         }
-        setUser(result);
+        setUser({ id: result.id as number, name: result.name as string });
       } catch (err) {
         console.error(err);
       }

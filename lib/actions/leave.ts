@@ -1,10 +1,11 @@
 'use server'
 
 import { cache } from 'react'
-import { unstable_cache } from 'next/cache'
+import { unstable_cache, revalidateTag } from 'next/cache'
 import { prisma } from '@/prisma'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
+import { revalidatePath } from 'next/cache'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key'
 
@@ -106,6 +107,13 @@ export async function createLeaveRequest(leaveData: {
       },
     })
 
+    // Invalidate cached data so dashboards reflect the latest state immediately
+    revalidateTag('leave')
+    revalidateTag('requests')
+    revalidatePath('/admin/dashboard')
+    revalidatePath('/admin/dashboard/izin')
+    revalidatePath('/dashboard')
+
     return { success: true, data: leave }
   } catch (err) {
     console.error('Error creating leave request:', err)
@@ -130,6 +138,13 @@ export async function updateLeaveRequestStatus(id: number, status: 'Approved' | 
       },
     })
 
+    // Invalidate caches to ensure dashboards and lists update instantly
+    revalidateTag('leave')
+    revalidateTag('requests')
+    revalidatePath('/admin/dashboard')
+    revalidatePath('/admin/dashboard/izin')
+    revalidatePath('/dashboard')
+
     return { success: true, data: updated }
   } catch (err) {
     console.error('Error updating leave request:', err)
@@ -142,6 +157,12 @@ export async function deleteLeaveRequest(id: number) {
     await verifyToken()
 
     await prisma.leaveRequest.delete({ where: { id } })
+    // Invalidate caches to reflect deletion
+    revalidateTag('leave')
+    revalidateTag('requests')
+    revalidatePath('/admin/dashboard')
+    revalidatePath('/admin/dashboard/izin')
+    revalidatePath('/dashboard')
     return { success: true, message: 'Permintaan cuti berhasil dihapus' }
   } catch (err) {
     console.error('Error deleting leave request:', err)

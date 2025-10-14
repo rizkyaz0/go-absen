@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
+// Fallback secret to avoid runtime crash when env is missing
+const JWT_SECRET_STR = process.env.JWT_SECRET || "secret_key";
+const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STR);
 
 // Halaman publik (tidak perlu login)
-const publicPaths = ["/", "/login", "/register"];
+const publicPaths = ["/", "/login", "/register", "/faq", "/help", "/terms", "/privacy"];
 
 // Halaman yang boleh diakses non-admin
 const allowedForNonAdmin = ["/dashboard"];
@@ -27,8 +29,8 @@ export async function middleware(req: NextRequest) {
 
   // ✅ 3️⃣ Kalau sudah login → verifikasi JWT
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    const roleId = (payload as any).roleId;
+    const { payload } = await jwtVerify<{ userId: number; roleId: number }>(token, JWT_SECRET);
+    const roleId = payload.roleId;
 
     // Admin boleh akses semua
     if (roleId === 3) {
