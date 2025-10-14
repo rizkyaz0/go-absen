@@ -120,6 +120,7 @@ export default function LaporanPage() {
         setLateEmployees(Array.isArray(result.data.lateEmployees) ? result.data.lateEmployees : []);
         setDailyData(Array.isArray(result.data.daily) ? result.data.daily : []);
         setLastUpdated(new Date());
+        setError(null); // Clear any previous errors
       } else {
         console.error('Error fetching comprehensive report:', result.error);
         setError(result.error || 'Gagal memuat data laporan');
@@ -139,6 +140,7 @@ export default function LaporanPage() {
   // Fallback function for individual data fetching
   const fetchDataIndividually = async () => {
     try {
+      console.log('Fetching data individually...');
       const [summaryResult, monthlyResult, lateResult, dailyResult] = await Promise.all([
         getSummaryReport(filterTanggal.dari, filterTanggal.hingga),
         getMonthlyReport(new Date(filterTanggal.dari).getFullYear()),
@@ -146,12 +148,44 @@ export default function LaporanPage() {
         getDailyReport(filterTanggal.dari, filterTanggal.hingga, 7)
       ]);
 
-      if (summaryResult.success) setSummaryData(summaryResult.data || null);
-      if (monthlyResult.success) setMonthlyData(Array.isArray(monthlyResult.data) ? monthlyResult.data : []);
-      if (lateResult.success) setLateEmployees(Array.isArray(lateResult.data) ? lateResult.data : []);
-      if (dailyResult.success) setDailyData(Array.isArray(dailyResult.data) ? dailyResult.data : []);
+      console.log('Individual results:', { summaryResult, monthlyResult, lateResult, dailyResult });
+
+      if (summaryResult.success) {
+        setSummaryData(summaryResult.data || null);
+        console.log('Summary data set:', summaryResult.data);
+      } else {
+        console.error('Summary failed:', summaryResult.error);
+      }
+
+      if (monthlyResult.success) {
+        const monthly = Array.isArray(monthlyResult.data) ? monthlyResult.data : [];
+        setMonthlyData(monthly);
+        console.log('Monthly data set:', monthly);
+      } else {
+        console.error('Monthly failed:', monthlyResult.error);
+      }
+
+      if (lateResult.success) {
+        const late = Array.isArray(lateResult.data) ? lateResult.data : [];
+        setLateEmployees(late);
+        console.log('Late employees set:', late);
+      } else {
+        console.error('Late employees failed:', lateResult.error);
+      }
+
+      if (dailyResult.success) {
+        const daily = Array.isArray(dailyResult.data) ? dailyResult.data : [];
+        setDailyData(daily);
+        console.log('Daily data set:', daily);
+      } else {
+        console.error('Daily failed:', dailyResult.error);
+      }
+
+      setLastUpdated(new Date());
+      setError(null); // Clear error if any individual call succeeds
     } catch (error) {
       console.error('Error in fallback data fetching:', error);
+      setError('Gagal memuat data laporan');
     }
   };
 
@@ -296,6 +330,12 @@ export default function LaporanPage() {
               Terakhir diperbarui: {lastUpdated.toLocaleString('id-ID')}
             </p>
           )}
+          {/* Debug info */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-xs text-gray-500 mt-2">
+              Debug: Summary={summaryData ? '✓' : '✗'}, Monthly={monthlyData.length}, Late={lateEmployees.length}, Daily={dailyData.length}
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExportPDF} disabled={loading}>
@@ -317,6 +357,12 @@ export default function LaporanPage() {
             <div>
               <h3 className="text-sm font-medium text-red-800">Error</h3>
               <p className="text-sm text-red-700 mt-1">{error}</p>
+              <button 
+                onClick={fetchAllData}
+                className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+              >
+                Coba lagi
+              </button>
             </div>
           </div>
         </div>

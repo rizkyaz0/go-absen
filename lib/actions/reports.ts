@@ -29,6 +29,7 @@ export async function getSummaryReport(startDate?: string, endDate?: string) {
       totalAbsences: bigint;
       totalHadir: bigint;
       totalTerlambat: bigint;
+      totalAbsen: bigint;
       izinDiterima: bigint;
       izinDitolak: bigint;
     }>>`
@@ -37,20 +38,22 @@ export async function getSummaryReport(startDate?: string, endDate?: string) {
         (SELECT COUNT(*) FROM Absence WHERE date >= ${start} AND date <= ${end}) as totalAbsences,
         (SELECT COUNT(*) FROM Absence WHERE date >= ${start} AND date <= ${end} AND status = 'Hadir') as totalHadir,
         (SELECT COUNT(*) FROM Absence WHERE date >= ${start} AND date <= ${end} AND status = 'Hadir' AND TIME(checkIn) > '08:00:00') as totalTerlambat,
+        (SELECT COUNT(*) FROM Absence WHERE date >= ${start} AND date <= ${end} AND status = 'Absen') as totalAbsen,
         (SELECT COUNT(*) FROM LeaveRequest WHERE startDate >= ${start} AND startDate <= ${end} AND status = 'Approved') as izinDiterima,
         (SELECT COUNT(*) FROM LeaveRequest WHERE startDate >= ${start} AND startDate <= ${end} AND status = 'Rejected') as izinDitolak
     `
 
     const data = summaryData[0]
     const totalHariKerja = Number(data.totalHariKerja)
-    const totalAbsences = Number(data.totalAbsences)
     const totalHadir = Number(data.totalHadir)
     const totalTerlambat = Number(data.totalTerlambat)
+    const totalAbsen = Number(data.totalAbsen)
     const izinDiterima = Number(data.izinDiterima)
     const izinDitolak = Number(data.izinDitolak)
 
     // Calculate attendance percentage more accurately
-    const rataRataKehadiran = totalAbsences > 0 ? (totalHadir / totalAbsences) * 100 : 0
+    const totalPossible = totalHadir + totalAbsen
+    const rataRataKehadiran = totalPossible > 0 ? (totalHadir / totalPossible) * 100 : 0
 
     return {
       success: true,
@@ -75,7 +78,7 @@ export async function getDailyReport(startDate?: string, endDate?: string, limit
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const end = endDate ? new Date(endDate) : new Date()
 
-    // Use raw SQL for better performance
+    // Use raw SQL for better performance - fix status values based on schema
     const dailyData = await prisma.$queryRaw<Array<{
       tanggal: string;
       hadir: bigint;
@@ -87,10 +90,9 @@ export async function getDailyReport(startDate?: string, endDate?: string, limit
         DATE(a.date) as tanggal,
         COALESCE(SUM(CASE WHEN a.status = 'Hadir' THEN 1 ELSE 0 END), 0) as hadir,
         COALESCE(SUM(CASE WHEN a.status = 'Hadir' AND TIME(a.checkIn) > '08:00:00' THEN 1 ELSE 0 END), 0) as terlambat,
-        COALESCE(SUM(CASE WHEN a.status = 'Alpha' THEN 1 ELSE 0 END), 0) as absen,
-        COALESCE(SUM(CASE WHEN lr.status = 'Approved' THEN 1 ELSE 0 END), 0) as izin
+        COALESCE(SUM(CASE WHEN a.status = 'Absen' THEN 1 ELSE 0 END), 0) as absen,
+        COALESCE(SUM(CASE WHEN a.status = 'Izin' THEN 1 ELSE 0 END), 0) as izin
       FROM Absence a
-      LEFT JOIN LeaveRequest lr ON DATE(lr.startDate) = DATE(a.date)
       WHERE a.date >= ${start} AND a.date <= ${end}
       GROUP BY DATE(a.date)
       ORDER BY a.date DESC
@@ -123,7 +125,7 @@ export async function getMonthlyReport(year: number) {
   try {
     await verifyToken()
 
-    // Use raw SQL for better performance and proper month names
+    // Use raw SQL for better performance and proper month names - fix status values
     const monthlyData = await prisma.$queryRaw<Array<{
       bulan: string;
       hadir: bigint;
@@ -133,29 +135,28 @@ export async function getMonthlyReport(year: number) {
     }>>`
       SELECT 
         CASE 
-          WHEN MONTH(a.date) = 1 THEN 'Januari'
-          WHEN MONTH(a.date) = 2 THEN 'Februari'
-          WHEN MONTH(a.date) = 3 THEN 'Maret'
-          WHEN MONTH(a.date) = 4 THEN 'April'
-          WHEN MONTH(a.date) = 5 THEN 'Mei'
-          WHEN MONTH(a.date) = 6 THEN 'Juni'
-          WHEN MONTH(a.date) = 7 THEN 'Juli'
-          WHEN MONTH(a.date) = 8 THEN 'Agustus'
-          WHEN MONTH(a.date) = 9 THEN 'September'
-          WHEN MONTH(a.date) = 10 THEN 'Oktober'
-          WHEN MONTH(a.date) = 11 THEN 'November'
-          WHEN MONTH(a.date) = 12 THEN 'Desember'
+          WHEN m.month_num = 1 THEN 'Januari'
+          WHEN m.month_num = 2 THEN 'Februari'
+          WHEN m.month_num = 3 THEN 'Maret'
+          WHEN m.month_num = 4 THEN 'April'
+          WHEN m.month_num = 5 THEN 'Mei'
+          WHEN m.month_num = 6 THEN 'Juni'
+          WHEN m.month_num = 7 THEN 'Juli'
+          WHEN m.month_num = 8 THEN 'Agustus'
+          WHEN m.month_num = 9 THEN 'September'
+          WHEN m.month_num = 10 THEN 'Oktober'
+          WHEN m.month_num = 11 THEN 'November'
+          WHEN m.month_num = 12 THEN 'Desember'
         END as bulan,
         COALESCE(SUM(CASE WHEN a.status = 'Hadir' THEN 1 ELSE 0 END), 0) as hadir,
         COALESCE(SUM(CASE WHEN a.status = 'Hadir' AND TIME(a.checkIn) > '08:00:00' THEN 1 ELSE 0 END), 0) as terlambat,
-        COALESCE(SUM(CASE WHEN a.status = 'Alpha' THEN 1 ELSE 0 END), 0) as absen,
-        COALESCE(SUM(CASE WHEN lr.status = 'Approved' THEN 1 ELSE 0 END), 0) as izin
+        COALESCE(SUM(CASE WHEN a.status = 'Absen' THEN 1 ELSE 0 END), 0) as absen,
+        COALESCE(SUM(CASE WHEN a.status = 'Izin' THEN 1 ELSE 0 END), 0) as izin
       FROM (
         SELECT 1 as month_num UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6
         UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
       ) m
       LEFT JOIN Absence a ON MONTH(a.date) = m.month_num AND YEAR(a.date) = ${year}
-      LEFT JOIN LeaveRequest lr ON MONTH(lr.startDate) = m.month_num AND YEAR(lr.startDate) = ${year}
       GROUP BY m.month_num
       ORDER BY m.month_num
     `
@@ -194,6 +195,7 @@ export async function getLateEmployeesReport(startDate?: string, endDate?: strin
       id: number;
       nama: string;
       email: string;
+      roleName: string;
       totalTerlambat: bigint;
       bulan: string;
     }>>`
@@ -201,15 +203,17 @@ export async function getLateEmployeesReport(startDate?: string, endDate?: strin
         u.id,
         u.name as nama,
         u.email,
+        r.name as roleName,
         COUNT(a.id) as totalTerlambat,
         DATE_FORMAT(a.date, '%Y-%m') as bulan
       FROM User u
       INNER JOIN Absence a ON u.id = a.userId
+      INNER JOIN Role r ON u.roleId = r.id
       WHERE a.date >= ${start}
         AND a.date <= ${end}
         AND a.status = 'Hadir'
         AND TIME(a.checkIn) > '08:00:00'
-      GROUP BY u.id, u.name, u.email, DATE_FORMAT(a.date, '%Y-%m')
+      GROUP BY u.id, u.name, u.email, r.name, DATE_FORMAT(a.date, '%Y-%m')
       ORDER BY totalTerlambat DESC
       LIMIT ${limit}
     `
@@ -219,12 +223,13 @@ export async function getLateEmployeesReport(startDate?: string, endDate?: strin
       id: number;
       nama: string;
       email: string;
+      roleName: string;
       totalTerlambat: bigint;
       bulan: string;
     }) => ({
       id: emp.id,
       nama: emp.nama,
-      jabatan: 'Karyawan', // Default value since we don't have job title in schema
+      jabatan: emp.roleName,
       totalTerlambat: Number(emp.totalTerlambat),
       bulan: emp.bulan
     }))
@@ -242,6 +247,7 @@ export async function getComprehensiveReport(startDate?: string, endDate?: strin
     await verifyToken()
 
     const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    console.log('Comprehensive report params:', { startDate, endDate, start: start.getFullYear() })
 
     // Get all data in parallel for better performance
     const [summaryResult, monthlyResult, lateEmployeesResult, dailyResult] = await Promise.all([
@@ -250,6 +256,13 @@ export async function getComprehensiveReport(startDate?: string, endDate?: strin
       getLateEmployeesReport(startDate, endDate, 10),
       getDailyReport(startDate, endDate, 7)
     ])
+
+    console.log('Comprehensive report results:', {
+      summary: summaryResult.success ? 'success' : summaryResult.error,
+      monthly: monthlyResult.success ? 'success' : monthlyResult.error,
+      lateEmployees: lateEmployeesResult.success ? 'success' : lateEmployeesResult.error,
+      daily: dailyResult.success ? 'success' : dailyResult.error
+    })
 
     return {
       success: true,
