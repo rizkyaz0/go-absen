@@ -1,14 +1,14 @@
 /**
- * Design Tokens - Shadcn/UI + Tailwind CSS
+ * Design Tokens - Shadcn/UI v3.40 + Tailwind CSS
  * 
- * This file defines all design tokens following shadcn/ui conventions
+ * This file defines all design tokens following shadcn/ui v3.40 conventions
  * and ensures consistency across light and dark modes.
  */
 
-// Color tokens following shadcn/ui naming convention
+// Color tokens following shadcn/ui v3.40 naming convention
 export const designTokens = {
   colors: {
-    // Primary colors
+    // Primary colors - Shadcn UI v3.40 compatible
     primary: {
       50: "hsl(210 40% 98%)",
       100: "hsl(210 40% 96%)",
