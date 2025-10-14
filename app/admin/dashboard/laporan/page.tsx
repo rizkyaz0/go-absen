@@ -30,7 +30,8 @@ import {
   getSummaryReport, 
   getMonthlyReport, 
   getLateEmployeesReport, 
-  getDailyReport 
+  getDailyReport,
+  getComprehensiveReport 
 } from '@/lib/actions';
 import { showExportSuccessToast, showExportErrorToast } from "@/lib/toast-utils";
 
@@ -95,6 +96,8 @@ export default function LaporanPage() {
   const [jenisLaporan, setJenisLaporan] = useState('bulanan');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
   // Data states
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
@@ -105,66 +108,50 @@ export default function LaporanPage() {
   // Ref untuk print
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Fetch data functions
-  const fetchSummaryData = async () => {
-    try {
-      const result = await getSummaryReport(filterTanggal.dari, filterTanggal.hingga);
-      if (result.success) {
-        setSummaryData(result.data);
-      }
-    } catch (error) {
-      console.error('Error fetching summary data:', error);
-    }
-  };
-
-  const fetchMonthlyData = async () => {
-    try {
-      const year = new Date(filterTanggal.dari).getFullYear();
-      const result = await getMonthlyReport(year);
-      if (result.success) {
-        setMonthlyData(Array.isArray(result.data) ? result.data : []);
-      }
-    } catch (error) {
-      console.error('Error fetching monthly data:', error);
-      setMonthlyData([]);
-    }
-  };
-
-  const fetchLateEmployees = async () => {
-    try {
-      const result = await getLateEmployeesReport(filterTanggal.dari, filterTanggal.hingga, 10);
-      if (result.success) {
-        setLateEmployees(Array.isArray(result.data) ? result.data : []);
-      }
-    } catch (error) {
-      console.error('Error fetching late employees:', error);
-      setLateEmployees([]);
-    }
-  };
-
-  const fetchDailyData = async () => {
-    try {
-      const result = await getDailyReport(filterTanggal.dari, filterTanggal.hingga, 7);
-      if (result.success) {
-        setDailyData(Array.isArray(result.data) ? result.data : []);
-      }
-    } catch (error) {
-      console.error('Error fetching daily data:', error);
-      setDailyData([]);
-    }
-  };
-
+  // Fetch data functions - optimized version
   const fetchAllData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      await Promise.all([
-        fetchSummaryData(),
-        fetchMonthlyData(),
-        fetchLateEmployees(),
-        fetchDailyData()
-      ]);
+      const result = await getComprehensiveReport(filterTanggal.dari, filterTanggal.hingga);
+      if (result.success && result.data) {
+        setSummaryData(result.data.summary || null);
+        setMonthlyData(Array.isArray(result.data.monthly) ? result.data.monthly : []);
+        setLateEmployees(Array.isArray(result.data.lateEmployees) ? result.data.lateEmployees : []);
+        setDailyData(Array.isArray(result.data.daily) ? result.data.daily : []);
+        setLastUpdated(new Date());
+      } else {
+        console.error('Error fetching comprehensive report:', result.error);
+        setError(result.error || 'Gagal memuat data laporan');
+        // Fallback to individual calls
+        await fetchDataIndividually();
+      }
+    } catch (error) {
+      console.error('Error fetching comprehensive report:', error);
+      setError('Terjadi kesalahan saat memuat data laporan');
+      // Fallback to individual calls
+      await fetchDataIndividually();
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fallback function for individual data fetching
+  const fetchDataIndividually = async () => {
+    try {
+      const [summaryResult, monthlyResult, lateResult, dailyResult] = await Promise.all([
+        getSummaryReport(filterTanggal.dari, filterTanggal.hingga),
+        getMonthlyReport(new Date(filterTanggal.dari).getFullYear()),
+        getLateEmployeesReport(filterTanggal.dari, filterTanggal.hingga, 10),
+        getDailyReport(filterTanggal.dari, filterTanggal.hingga, 7)
+      ]);
+
+      if (summaryResult.success) setSummaryData(summaryResult.data || null);
+      if (monthlyResult.success) setMonthlyData(Array.isArray(monthlyResult.data) ? monthlyResult.data : []);
+      if (lateResult.success) setLateEmployees(Array.isArray(lateResult.data) ? lateResult.data : []);
+      if (dailyResult.success) setDailyData(Array.isArray(dailyResult.data) ? dailyResult.data : []);
+    } catch (error) {
+      console.error('Error in fallback data fetching:', error);
     }
   };
 
@@ -287,9 +274,10 @@ export default function LaporanPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Memuat data laporan...</span>
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <span className="text-lg font-medium">Memuat data laporan...</span>
+        <p className="text-sm text-muted-foreground">Mohon tunggu sebentar</p>
       </div>
     );
   }
@@ -303,18 +291,36 @@ export default function LaporanPage() {
           <p className="text-muted-foreground">
             Analisis dan monitoring data absensi karyawan
           </p>
+          {lastUpdated && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Terakhir diperbarui: {lastUpdated.toLocaleString('id-ID')}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportPDF}>
+          <Button variant="outline" onClick={handleExportPDF} disabled={loading}>
             <Printer className="w-4 h-4 mr-2" />
             Print PDF
           </Button>
-          <Button onClick={handleExportExcel}>
+          <Button onClick={handleExportExcel} disabled={loading}>
             <Download className="w-4 h-4 mr-2" />
             Export Excel
           </Button>
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <XCircle className="h-5 w-5 text-red-500 mr-2" />
+            <div>
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filter Section */}
       <Card>
@@ -375,17 +381,41 @@ export default function LaporanPage() {
               </div>
             </div>
           </div>
-          <Button onClick={handleFilter} className="w-full sm:w-auto">
-            <Filter className="w-4 h-4 mr-2" />
-            Terapkan Filter
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleFilter} className="w-full sm:w-auto" disabled={loading}>
+              <Filter className="w-4 h-4 mr-2" />
+              Terapkan Filter
+            </Button>
+            <Button variant="outline" onClick={fetchAllData} disabled={loading}>
+              <Loader2 className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Quick Stats Summary */}
+      {summaryData && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Ringkasan Cepat</h3>
+              <p className="text-sm text-gray-600">
+                Periode: {new Date(filterTanggal.dari).toLocaleDateString('id-ID')} - {new Date(filterTanggal.hingga).toLocaleDateString('id-ID')}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-600">{summaryData.rataRataKehadiran}%</div>
+              <div className="text-sm text-gray-600">Tingkat Kehadiran</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content untuk print */}
       <div ref={printRef} className="space-y-6">
         {/* Summary Stats */}
-        {summaryData && (
+        {summaryData ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -406,6 +436,12 @@ export default function LaporanPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{summaryData.rataRataKehadiran}%</div>
                 <p className="text-xs text-muted-foreground">Kehadiran rata-rata</p>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div 
+                    className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${Math.min(summaryData.rataRataKehadiran, 100)}%` }}
+                  ></div>
+                </div>
               </CardContent>
             </Card>
 
@@ -442,6 +478,12 @@ export default function LaporanPage() {
               </CardContent>
             </Card>
           </div>
+        ) : (
+          <div className="text-center py-8">
+            <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-muted-foreground">Tidak ada data ringkasan</h3>
+            <p className="text-sm text-muted-foreground">Coba ubah filter tanggal untuk melihat data</p>
+          </div>
         )}
 
         {/* Rekap Bulanan */}
@@ -456,44 +498,52 @@ export default function LaporanPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4">Bulan</th>
-                    <th className="text-right py-3 px-4">Hadir</th>
-                    <th className="text-right py-3 px-4">Terlambat</th>
-                    <th className="text-right py-3 px-4">Absen</th>
-                    <th className="text-right py-3 px-4">Izin</th>
-                    <th className="text-right py-3 px-4">Persentase</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {monthlyData.map((item, index) => {
-                    const total = item.hadir + item.absen + item.izin;
-                    const persentase = total > 0 ? ((item.hadir / total) * 100).toFixed(1) : "0";
-                    return (
-                      <tr key={index} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium">{item.bulan}</td>
-                        <td className="text-right py-3 px-4">{item.hadir.toLocaleString()}</td>
-                        <td className="text-right py-3 px-4">
-                          <Badge variant={item.terlambat > 40 ? "destructive" : "secondary"}>
-                            {item.terlambat}
-                          </Badge>
-                        </td>
-                        <td className="text-right py-3 px-4">{item.absen}</td>
-                        <td className="text-right py-3 px-4">{item.izin}</td>
-                        <td className="text-right py-3 px-4 font-medium">
-                          <Badge variant={parseFloat(persentase) >= 95 ? "default" : "outline"}>
-                            {persentase}%
-                          </Badge>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            {monthlyData.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4">Bulan</th>
+                      <th className="text-right py-3 px-4">Hadir</th>
+                      <th className="text-right py-3 px-4">Terlambat</th>
+                      <th className="text-right py-3 px-4">Absen</th>
+                      <th className="text-right py-3 px-4">Izin</th>
+                      <th className="text-right py-3 px-4">Persentase</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyData.map((item, index) => {
+                      const total = item.hadir + item.absen + item.izin;
+                      const persentase = total > 0 ? ((item.hadir / total) * 100).toFixed(1) : "0";
+                      return (
+                        <tr key={index} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">{item.bulan}</td>
+                          <td className="text-right py-3 px-4">{item.hadir.toLocaleString()}</td>
+                          <td className="text-right py-3 px-4">
+                            <Badge variant={item.terlambat > 40 ? "destructive" : "secondary"}>
+                              {item.terlambat}
+                            </Badge>
+                          </td>
+                          <td className="text-right py-3 px-4">{item.absen}</td>
+                          <td className="text-right py-3 px-4">{item.izin}</td>
+                          <td className="text-right py-3 px-4 font-medium">
+                            <Badge variant={parseFloat(persentase) >= 95 ? "default" : "outline"}>
+                              {persentase}%
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-muted-foreground">Tidak ada data bulanan</h3>
+                <p className="text-sm text-muted-foreground">Data absensi bulanan belum tersedia</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -509,28 +559,38 @@ export default function LaporanPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {filteredKaryawan.map((karyawan) => (
-                <div key={karyawan.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                      {getInitials(karyawan.nama)}
+            {filteredKaryawan.length > 0 ? (
+              <div className="space-y-4">
+                {filteredKaryawan.map((karyawan) => (
+                  <div key={karyawan.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                        {getInitials(karyawan.nama)}
+                      </div>
+                      <div>
+                        <p className="font-semibold">{karyawan.nama}</p>
+                        <p className="text-sm text-gray-500">{karyawan.jabatan}</p>
+                        <p className="text-xs text-gray-400">{karyawan.bulan}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold">{karyawan.nama}</p>
-                      <p className="text-sm text-gray-500">{karyawan.jabatan}</p>
-                      <p className="text-xs text-gray-400">{karyawan.bulan}</p>
+                    <div className="text-right">
+                      <Badge variant="destructive" className="text-lg px-3 py-1">
+                        {karyawan.totalTerlambat} kali
+                      </Badge>
+                      <p className="text-sm text-gray-500 mt-1">total terlambat</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <Badge variant="destructive" className="text-lg px-3 py-1">
-                      {karyawan.totalTerlambat} kali
-                    </Badge>
-                    <p className="text-sm text-gray-500 mt-1">total terlambat</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-muted-foreground">Tidak ada data karyawan terlambat</h3>
+                <p className="text-sm text-muted-foreground">
+                  {searchQuery ? 'Tidak ada karyawan yang sesuai dengan pencarian' : 'Semua karyawan tepat waktu dalam periode ini'}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -541,43 +601,54 @@ export default function LaporanPage() {
               <PieChart className="w-5 h-5" />
               Rekap Harian Terakhir
             </CardTitle>
+            <CardDescription>
+              Data absensi 7 hari terakhir
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {dailyData.map((hari, index) => (
-                <Card key={index} className="text-center">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">
-                      {new Date(hari.tanggal).toLocaleDateString('id-ID', { 
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'short'
-                      })}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Hadir:</span>
-                      <Badge variant="default">{hari.hadir}</Badge>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Terlambat:</span>
-                      <Badge variant="secondary">{hari.terlambat}</Badge>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Absen:</span>
-                      <Badge variant="outline">{hari.absen}</Badge>
-                    </div>
-                    {hari.izin > 0 && (
+            {dailyData.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {dailyData.map((hari, index) => (
+                  <Card key={index} className="text-center hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">
+                        {new Date(hari.tanggal).toLocaleDateString('id-ID', { 
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'short'
+                        })}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>Izin:</span>
-                        <Badge variant="outline">{hari.izin}</Badge>
+                        <span>Hadir:</span>
+                        <Badge variant="default">{hari.hadir}</Badge>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Terlambat:</span>
+                        <Badge variant="secondary">{hari.terlambat}</Badge>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Absen:</span>
+                        <Badge variant="outline">{hari.absen}</Badge>
+                      </div>
+                      {hari.izin > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>Izin:</span>
+                          <Badge variant="outline">{hari.izin}</Badge>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <PieChart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-muted-foreground">Tidak ada data harian</h3>
+                <p className="text-sm text-muted-foreground">Data absensi harian belum tersedia</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
