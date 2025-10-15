@@ -241,7 +241,7 @@ export default function AbsensiPage() {
 
   const getStatusBadge = (status: string, checkIn?: string | Date | null) => {
     const checkInTime = checkIn ? new Date(checkIn) : null;
-    const isLate = checkInTime && checkInTime.getHours() > 8;
+    const isLate = checkInTime && (checkInTime.getHours() > 8 || (checkInTime.getHours() === 8 && checkInTime.getMinutes() > 15));
     
     switch (status) {
       case "Hadir":
@@ -358,9 +358,9 @@ export default function AbsensiPage() {
                 <p className="text-sm font-medium text-muted-foreground">Terlambat</p>
                 <p className="text-2xl font-bold">
                   {filteredAbsences.filter(a => {
-                    if (!a.checkIn) return false;
-                    const checkInTime = new Date(a.checkIn);
-                    return checkInTime.getHours() > 8;
+                  if (!a.checkIn) return false;
+                  const checkInTime = new Date(a.checkIn);
+                  return checkInTime.getHours() > 8 || (checkInTime.getHours() === 8 && checkInTime.getMinutes() > 15);
                   }).length}
                 </p>
               </div>

@@ -114,14 +114,38 @@ export async function getSummaryReport(startDate?: string, endDate?: string) {
     }
 
     const totalHariKerja = workingDays
-    const totalHadir = Number(data.totalHadir)
+
+    // Count total employees (active only)
+    const totalKaryawan = await prisma.user.count({ where: { statusId: 1 } })
+
+    // Count unique present employees per working day (Mon–Fri, excluding full-day holidays)
+    const presentAgg = await prisma.$queryRaw<{ total: bigint }[]>`
+      SELECT COALESCE(SUM(t.cnt), 0) AS total
+      FROM (
+        SELECT DATE(DATE_ADD(a.date, INTERVAL 7 HOUR)) AS ymd,
+               COUNT(DISTINCT a.userId) AS cnt
+        FROM Absence a
+        WHERE DATE(DATE_ADD(a.date, INTERVAL 7 HOUR)) BETWEEN ${startYmd} AND ${endLocal}
+          AND a.checkIn IS NOT NULL
+          AND DAYOFWEEK(DATE_ADD(a.date, INTERVAL 7 HOUR)) NOT IN (1, 7) -- exclude Sunday(1) & Saturday(7)
+          AND NOT EXISTS (
+            SELECT 1 FROM Holiday h
+            WHERE DATE(h.date) = DATE(DATE_ADD(a.date, INTERVAL 7 HOUR))
+              AND h.isHalfDay = FALSE
+          )
+        GROUP BY DATE(DATE_ADD(a.date, INTERVAL 7 HOUR))
+      ) t
+    `
+    const totalHadir = Number(presentAgg[0]?.total || 0)
+
     const totalTerlambat = Number(data.totalTerlambat)
     const totalAbsen = Number(data.totalAbsen)
     const izinDiterima = Number(data.izinDiterima)
     const izinDitolak = Number(data.izinDitolak)
 
-    // Attendance rate based on hadir vs working days
-    const rataRataKehadiran = totalHariKerja > 0 ? (totalHadir / totalHariKerja) * 100 : 0
+    // Attendance rate based on unique present vs (workingDays * total employees)
+    const totalPossible = totalHariKerja * totalKaryawan
+    const rataRataKehadiran = totalPossible > 0 ? (totalHadir / totalPossible) * 100 : 0
 
     return {
       success: true,

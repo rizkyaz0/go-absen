@@ -280,6 +280,7 @@ export async function toggleAbsenceAction(userId: number, shiftId: number = 1) {
 
     if (!existingAbsence) {
       // Create new absence record for check-in
+      // Business rule: start of work day is 08:00, late if after 08:15
       // Convert local time to UTC for database storage
       const checkInUTC = fromZonedTime(localTime, timeZone)
       
@@ -305,12 +306,13 @@ export async function toggleAbsenceAction(userId: number, shiftId: number = 1) {
         message: 'Absen masuk berhasil!' 
       }
     } else if (existingAbsence.checkIn && !existingAbsence.checkOut) {
-      // Check if it's before 17:00 local time
+      // Business rule: checkout allowed at or after 16:00 local time
       const currentHour = localTime.getHours()
-      if (currentHour < 17) {
+      const currentMinutes = localTime.getMinutes()
+      if (currentHour < 16) {
         return { 
           success: false, 
-          error: 'Belum waktu pulang. Silakan tunggu hingga jam 17:00.' 
+          error: 'Belum waktu pulang. Silakan tunggu hingga jam 16:00.' 
         }
       }
       

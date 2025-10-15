@@ -446,8 +446,8 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 recentAbsensi.map((item) => {
-                  const checkInTime = item.checkIn ? new Date(item.checkIn) : null;
-                  const isLate = checkInTime && checkInTime.getHours() > 8;
+      const checkInTime = item.checkIn ? new Date(item.checkIn) : null;
+      const isLate = checkInTime && (checkInTime.getHours() > 8 || (checkInTime.getHours() === 8 && checkInTime.getMinutes() > 15));
                   
                   return (
                     <div
