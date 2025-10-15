@@ -45,7 +45,7 @@ const menuItems = [
     href: '/admin/dashboard/hari-libur',
     icon: Calendar,
     label: 'Hari Libur',
-    description: 'Tetapkan tanggal merah/harian libur'
+    description: 'Tetapkan tanggal merah'
   },
   {
     href: '/admin/dashboard/laporan',
