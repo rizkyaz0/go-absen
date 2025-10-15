@@ -12,6 +12,7 @@ export * from './leave'
 
 // Reports actions
 export * from './reports'
+export * from './holidays'
 
 // Statistics actions
 export * from './stats'

@@ -32,7 +32,7 @@ export async function getSummaryReport(startDate?: string, endDate?: string) {
       ? endDate
       : `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`
 
-    // Use raw SQL with local-date comparisons and timezone-adjusted times
+    // Use raw SQL with local-date comparisons and timezone-adjusted times for event counts
     const summaryData = await prisma.$queryRaw<Array<{
       totalHari: bigint;
       totalHadir: bigint;
@@ -79,16 +79,49 @@ export async function getSummaryReport(startDate?: string, endDate?: string) {
     `
 
     const data = summaryData[0]
-    const totalHariKerja = Number(data.totalHari)
+    // Compute working days (Mon–Fri) minus holidays set by admin
+    const holidays = await prisma.holiday.findMany({
+      where: {
+        date: {
+          gte: new Date(startYmd + 'T00:00:00.000Z'),
+          lte: new Date(endLocal + 'T23:59:59.999Z'),
+        },
+      },
+      select: { date: true, isHalfDay: true },
+    })
+
+    // Build a map of YYYY-MM-DD -> deduction (1 for full-day, 0.5 for half-day)
+    const holidayDeductionByYmd = new Map<string, number>()
+    for (const h of holidays) {
+      const ymd = new Date(h.date).toISOString().slice(0, 10)
+      holidayDeductionByYmd.set(ymd, Math.max(holidayDeductionByYmd.get(ymd) ?? 0, h.isHalfDay ? 0.5 : 1))
+    }
+
+    // Iterate date range in local timezone to count working days
+    const start = new Date(startYmd + 'T00:00:00.000Z')
+    const end = new Date(endLocal + 'T00:00:00.000Z')
+    let workingDays = 0
+    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+      const local = toZonedTime(new Date(d), timeZone)
+      const day = local.getDay() // 0 Sun ... 6 Sat
+      if (day === 0 || day === 6) continue // weekend
+      let add = 1
+      const ymd = local.toISOString().slice(0, 10)
+      if (holidayDeductionByYmd.has(ymd)) {
+        add -= holidayDeductionByYmd.get(ymd) as number
+      }
+      if (add > 0) workingDays += add
+    }
+
+    const totalHariKerja = workingDays
     const totalHadir = Number(data.totalHadir)
     const totalTerlambat = Number(data.totalTerlambat)
     const totalAbsen = Number(data.totalAbsen)
     const izinDiterima = Number(data.izinDiterima)
     const izinDitolak = Number(data.izinDitolak)
 
-    // Attendance rate based on hadir vs (hadir + absen) to match monthly table logic
-    const totalPossible = totalHadir + totalAbsen
-    const rataRataKehadiran = totalPossible > 0 ? (totalHadir / totalPossible) * 100 : 0
+    // Attendance rate based on hadir vs working days
+    const rataRataKehadiran = totalHariKerja > 0 ? (totalHadir / totalHariKerja) * 100 : 0
 
     return {
       success: true,

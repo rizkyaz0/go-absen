@@ -450,7 +450,7 @@ export default function KaryawanPage() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" onClick={() => router.push(`/admin/dashboard/karyawan/detail/${user.id}`)}>
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button 

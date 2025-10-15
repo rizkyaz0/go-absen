@@ -42,6 +42,12 @@ const menuItems = [
     description: 'Kelola permintaan izin'
   },
   {
+    href: '/admin/dashboard/hari-libur',
+    icon: Calendar,
+    label: 'Hari Libur',
+    description: 'Tetapkan tanggal merah/harian libur'
+  },
+  {
     href: '/admin/dashboard/laporan',
     icon: Activity,
     label: 'Laporan',
