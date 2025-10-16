@@ -182,16 +182,21 @@ export default function AdminDashboard() {
       return absenceDateString === todayString;
     });
 
-    const hadirHariIni = absensiHariIni.filter((a) => a.checkIn !== null).length;
+    // Hitung hadir unik per hari (unique user), terlambat > 08:15
+    const uniquePresentIds = new Set<number>();
+    absensiHariIni.forEach((a) => {
+      if (a.checkIn) uniquePresentIds.add(a.user.id);
+    });
+    const hadirHariIni = uniquePresentIds.size;
     const terlambatHariIni = absensiHariIni.filter((a) => {
       if (!a.checkIn) return false;
-      const checkInTime = new Date(a.checkIn);
-      const hours = checkInTime.getHours();
-      return hours > 8; // Terlambat jika check-in setelah jam 8
+      const t = new Date(a.checkIn);
+      return t.getHours() > 8 || (t.getHours() === 8 && t.getMinutes() > 15);
     }).length;
 
-    const totalKaryawan = usersData.length;
-    const absenHariIni = totalKaryawan - hadirHariIni;
+    // Hanya karyawan aktif yang dihitung sebagai total
+    const totalKaryawan = usersData.filter((u) => u.statusId === 1).length;
+    const absenHariIni = Math.max(totalKaryawan - hadirHariIni, 0);
     const tingkatKehadiran = totalKaryawan > 0 ? (hadirHariIni / totalKaryawan) * 100 : 0;
 
     // Leave requests stats

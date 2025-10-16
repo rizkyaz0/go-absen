@@ -373,9 +373,19 @@ export default function AbsensiPage() {
             <div className="flex items-center">
               <XCircle className="h-8 w-8 text-red-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Absen</p>
+                <p className="text-sm font-medium text-muted-foreground">Absen (belum check-in)</p>
                 <p className="text-2xl font-bold">
-                  {filteredAbsences.filter(a => a.status === 'Absen').length}
+                  {(() => {
+                    const today = new Date();
+                    const ymd = today.toISOString().split('T')[0];
+                    const presentIds = new Set<number>();
+                    filteredAbsences.forEach((a) => {
+                      const d = new Date(a.date).toISOString().split('T')[0];
+                      if (d === ymd && a.checkIn) presentIds.add(a.user.id);
+                    });
+                    const uniqueUsers = new Set(filteredAbsences.map(a => a.user.id)).size;
+                    return Math.max(uniqueUsers - presentIds.size, 0);
+                  })()}
                 </p>
               </div>
             </div>
