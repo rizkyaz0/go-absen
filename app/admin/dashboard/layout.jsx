@@ -13,37 +13,51 @@ import {
   LogOut
 } from "lucide-react";
 import { cn } from '@/lib/utils';
+import { LogoutModal } from '@/components/LogoutModal';
+import { Toaster } from '@/components/ui/sonner';
 
 const menuItems = [
   {
     href: '/admin/dashboard',
     icon: Activity,
     label: 'Dashboard',
+    description: 'Overview sistem'
   },
   {
     href: '/admin/dashboard/karyawan',
     icon: Users,
     label: 'Data Karyawan',
+    description: 'Kelola data karyawan'
   },
   {
     href: '/admin/dashboard/absensi',
     icon: Calendar,
     label: 'Absensi',
+    description: 'Kelola absensi'
+  },
+  {
+    href: '/admin/dashboard/izin',
+    icon: Clock,
+    label: 'Izin & Cuti',
+    description: 'Kelola permintaan izin'
+  },
+  {
+    href: '/admin/dashboard/hari-libur',
+    icon: Calendar,
+    label: 'Hari Libur',
+    description: 'Tetapkan tanggal merah'
   },
   {
     href: '/admin/dashboard/laporan',
-    icon: Clock,
-    label: 'Laporan', 
-  },
-  {
-  href: '/admin/dashboard/izin',
     icon: Activity,
-    label: 'izin',
+    label: 'Laporan',
+    description: 'Analisis & laporan'
   },
 ];
 
 export default function AdminLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const pathname = usePathname();
 
   return (
@@ -88,12 +102,20 @@ export default function AdminLayout({ children }) {
                     <Button
                       variant={isActive ? "secondary" : "ghost"}
                       className={cn(
-                        "w-full justify-start transition-all",
-                        isSidebarOpen ? "px-3" : "px-2"
+                        "w-full justify-start transition-all group",
+                        isSidebarOpen ? "px-3 h-auto py-3" : "px-2 h-10"
                       )}
                     >
-                      <item.icon className="w-4 h-4" />
-                      {isSidebarOpen && <span className="ml-2">{item.label}</span>}
+                      <item.icon className={cn(
+                        "w-4 h-4 transition-colors",
+                        isActive ? "text-blue-600" : "text-muted-foreground group-hover:text-foreground"
+                      )} />
+                      {isSidebarOpen && (
+                        <div className="ml-2 text-left">
+                          <div className="font-medium">{item.label}</div>
+                          <div className="text-xs text-muted-foreground">{item.description}</div>
+                        </div>
+                      )}
                     </Button>
                   </Link>
                 </li>
@@ -104,7 +126,11 @@ export default function AdminLayout({ children }) {
 
         {/* Logout Button */}
         <div className="p-4">
-          <Button variant="outline" className="w-full justify-start">
+          <Button 
+            variant="outline" 
+            className="w-full justify-start"
+            onClick={() => setIsLogoutModalOpen(true)}
+          >
             <LogOut className="w-4 h-4" />
             {isSidebarOpen && <span className="ml-2">Logout</span>}
           </Button>
@@ -116,14 +142,29 @@ export default function AdminLayout({ children }) {
         {/* Top Header */}
         <header className="bg-white border-b p-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-800">
-              {menuItems.find(item => item.href === pathname)?.label || 'Admin Dashboard'}
-            </h1>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                {menuItems.find(item => item.href === pathname)?.label || 'Admin Dashboard'}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {menuItems.find(item => item.href === pathname)?.description || 'Sistem Manajemen Absensi'}
+              </p>
+            </div>
             <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-600">
-                Selamat datang, Admin
+              <div className="text-right">
+                <div className="text-sm font-medium text-gray-900">Selamat datang, Admin</div>
+                <div className="text-xs text-gray-500">
+                  {new Date().toLocaleDateString('id-ID', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </div>
               </div>
-              <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                A
+              </div>
             </div>
           </div>
         </header>
@@ -133,6 +174,15 @@ export default function AdminLayout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* Logout Modal */}
+      <LogoutModal 
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+      />
+
+      {/* Toast Notifications */}
+      <Toaster />
     </div>
   );
 }

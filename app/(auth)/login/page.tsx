@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { loginUser } from "@/lib/actions";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,20 +14,17 @@ export default function LoginPage() {
     e.preventDefault();
 
     try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setMessage(data.error || "Login gagal");
+      const result = await loginUser(email, password);
+      
+      if (result.error) {
+        setMessage(result.error);
         return;
       }
 
-      router.push(data.redirectUrl);
-    } catch (err) {
+      if (result.success && result.redirectUrl) {
+        router.push(result.redirectUrl);
+      }
+    } catch {
       setMessage("Terjadi error");
     }
   };

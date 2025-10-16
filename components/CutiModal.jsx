@@ -13,21 +13,32 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Home } from "lucide-react";
+import { getCurrentUserCached, createLeaveRequest, getUserLeaveStatsCached } from "@/lib/actions";
+import { showErrorToast, showLeaveRequestToast } from "@/lib/toast-utils";
 
 export default function CutiModal() {
   const [tanggalMulai, setTanggalMulai] = useState("");
   const [tanggalAkhir, setTanggalAkhir] = useState("");
   const [alasan, setAlasan] = useState("");
   const [userId, setUserId] = useState(null);
+  const [remainingLeave, setRemainingLeave] = useState(2);
 
-  // Ambil userId dari login
+  // Ambil userId dari login dan sisa cuti
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await fetch("/api/me");
-        if (!res.ok) throw new Error("Gagal ambil user");
-        const data = await res.json();
-        setUserId(data.id);
+        const result = await getCurrentUserCached();
+        if ('error' in result) {
+          console.error(result.error);
+          return;
+        }
+        setUserId(result.id);
+        
+        // Ambil sisa cuti
+        const leaveStats = await getUserLeaveStatsCached(result.id);
+        if ('success' in leaveStats && leaveStats.success) {
+          setRemainingLeave(leaveStats.data.remainingLeave);
+        }
       } catch (err) {
         console.error(err);
       }
@@ -38,34 +49,50 @@ export default function CutiModal() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!userId) {
-      alert("❌ User belum terdeteksi");
+      showErrorToast("User belum terdeteksi", "Silakan refresh halaman dan coba lagi");
+      return;
+    }
+
+    // Validasi tanggal
+    if (tanggalAkhir < tanggalMulai) {
+      showErrorToast("Tanggal tidak valid", "Tanggal akhir tidak boleh lebih awal dari tanggal mulai");
+      return;
+    }
+
+    // Hitung berapa hari cuti yang diminta
+    const startDate = new Date(tanggalMulai);
+    const endDate = new Date(tanggalAkhir);
+    const timeDiff = endDate.getTime() - startDate.getTime();
+    const requestedDays = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1;
+
+    // Validasi sisa cuti
+    if (requestedDays > remainingLeave) {
+      showErrorToast("Sisa cuti tidak mencukupi", `Sisa cuti: ${remainingLeave} hari, yang diminta: ${requestedDays} hari`);
       return;
     }
 
     try {
-      const res = await fetch("/api/leave", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          startDate: tanggalMulai,
-          endDate: tanggalAkhir,
-          type: "Cuti",
-          status: "Pending",
-          reason: alasan,
-        }),
+      const result = await createLeaveRequest({
+        userId,
+        startDate: tanggalMulai,
+        endDate: tanggalAkhir,
+        type: "Cuti",
+        reason: alasan,
       });
 
-      if (!res.ok) throw new Error("Gagal ajukan cuti");
+      if (result.error) {
+        showErrorToast("Gagal ajukan cuti", result.error);
+        return;
+      }
 
-      alert("✅ Pengajuan cuti berhasil!");
+      showLeaveRequestToast();
       setTanggalMulai("");
       setTanggalAkhir("");
       setAlasan("");
       window.location.reload();
     } catch (err) {
       console.error(err);
-      alert("❌ Gagal ajukan cuti");
+      showErrorToast("Gagal ajukan cuti", "Terjadi kesalahan saat mengajukan cuti");
     }
   };
 
@@ -87,6 +114,12 @@ export default function CutiModal() {
         <DialogDescription className="text-sm text-gray-500 mb-4">
           Isi tanggal dan alasan cuti. HRD akan meninjau pengajuan.
         </DialogDescription>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <p className="text-sm text-blue-800">
+            <strong>Sisa cuti bulan ini:</strong> {remainingLeave} hari
+          </p>
+        </div>
 
         <form
           onSubmit={handleSubmit}

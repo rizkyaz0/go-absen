@@ -19,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getUserById, updateUser } from "@/lib/actions";
+import { showErrorToast, showUserUpdatedToast } from "@/lib/toast-utils";
 
 export default function EditKaryawanPage() {
   const router = useRouter();
@@ -37,14 +39,20 @@ export default function EditKaryawanPage() {
     const fetchUser = async () => {
       setLoadingData(true);
       try {
-        const res = await fetch(`/api/users/${id}`);
-        if (!res.ok) throw new Error("Gagal mengambil data karyawan");
-        const data = await res.json();
-        setName(data.name);
-        setRoleId(data.roleId);
-        setStatusId(data.statusId);
+        const result = await getUserById(Number(id));
+        if (result.error) {
+          showErrorToast("Gagal mengambil data karyawan", result.error);
+          return;
+        }
+        
+        const data = result.data;
+        if (data) {
+          setName(data.name);
+          setRoleId(data.roleId);
+          setStatusId(data.statusId);
+        }
       } catch (error) {
-        alert((error as Error).message);
+        showErrorToast("Gagal mengambil data karyawan", (error as Error).message);
       } finally {
         setLoadingData(false);
       }
@@ -59,17 +67,21 @@ export default function EditKaryawanPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/users/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, roleId, statusId }),
+      const result = await updateUser(Number(id), {
+        name,
+        roleId: roleId!,
+        statusId: statusId!,
       });
 
-      if (!res.ok) throw new Error("Gagal memperbarui karyawan");
+      if (result.error) {
+        showErrorToast("Gagal memperbarui karyawan", result.error);
+        return;
+      }
 
+      showUserUpdatedToast(name);
       router.push("/admin/dashboard/karyawan");
     } catch (error) {
-      alert((error as Error).message);
+      showErrorToast("Gagal memperbarui karyawan", (error as Error).message);
     } finally {
       setLoading(false);
     }

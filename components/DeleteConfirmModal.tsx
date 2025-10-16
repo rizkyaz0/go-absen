@@ -1,24 +1,16 @@
 "use client";
 
-import * as React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import { ConfirmModal } from "./ConfirmModal";
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title?: string;
   description?: string;
+  isLoading?: boolean;
+  itemName?: string;
 }
 
 export function DeleteConfirmModal({
@@ -27,26 +19,31 @@ export function DeleteConfirmModal({
   onConfirm,
   title = "Konfirmasi Hapus",
   description = "Apakah Anda yakin ingin menghapus data ini?",
+  isLoading = false,
+  itemName,
 }: DeleteConfirmModalProps) {
+  const handleConfirm = async () => {
+    await onConfirm();
+    onClose();
+  };
+
+  const finalDescription = itemName 
+    ? `Apakah Anda yakin ingin menghapus "${itemName}"? Tindakan ini tidak dapat dibatalkan.`
+    : description;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="space-x-2">
-          <Button variant="outline" onClick={onClose}>
-            Batal
-          </Button>
-          <Button variant="destructive" onClick={() => {
-            onConfirm();
-            onClose();
-          }}>
-            Hapus
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmModal
+      isOpen={isOpen}
+      onClose={onClose}
+      onConfirm={handleConfirm}
+      title={title}
+      description={finalDescription}
+      confirmText="Hapus"
+      cancelText="Batal"
+      variant="destructive"
+      isLoading={isLoading}
+      type="delete"
+      icon={<Trash2 className="h-5 w-5" />}
+    />
   );
 }

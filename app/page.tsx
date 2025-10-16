@@ -101,7 +101,7 @@ export default function Home() {
           <div className="flex gap-4">
             <motion.div whileHover={{ scale: 1.1 }}>
               <Button className="text-lg px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transition shadow-lg" asChild>
-                <a href="/login">Mulai Sekarang</a>
+                <a href="/dashboard">Mulai Sekarang</a>
               </Button>
             </motion.div>
 
