@@ -15,13 +15,9 @@ import {
   XCircle, 
   Users, 
   Clock, 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  TrendingUp, 
   Calendar,
   AlertTriangle,
   Activity,
-  BarChart3,
-  PieChart,
   RefreshCw
 } from "lucide-react";
 import { 
@@ -514,37 +510,6 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Quick Actions
-          </CardTitle>
-          <CardDescription>Akses cepat ke fitur utama</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
-              <Users className="h-6 w-6" />
-              <span className="text-sm">Data Karyawan</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
-              <Calendar className="h-6 w-6" />
-              <span className="text-sm">Absensi</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
-              <PieChart className="h-6 w-6" />
-              <span className="text-sm">Laporan</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
-              <Clock className="h-6 w-6" />
-              <span className="text-sm">Izin & Cuti</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Toast Notifications */}
       <Toaster />

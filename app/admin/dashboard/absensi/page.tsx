@@ -22,9 +22,7 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  Eye,
-  Edit,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { getAllAbsencesCached, deleteAbsence } from "@/lib/actions";
 import { toZonedTime, format } from 'date-fns-tz';
@@ -521,12 +519,6 @@ export default function AbsensiPage() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Edit className="h-4 w-4" />
-                          </Button>
                           <Button 
                             size="sm" 
                             variant="outline"
