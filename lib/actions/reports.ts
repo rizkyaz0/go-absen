@@ -168,55 +168,89 @@ export async function getDailyReport(startDate?: string, endDate?: string, limit
   try {
     await verifyToken()
 
-    // Normalize to local date strings
     const timeZone = 'Asia/Jakarta'
     const now = new Date()
     const nowLocal = toZonedTime(now, timeZone)
     const defaultStartYmd = (() => {
       const d = new Date(nowLocal)
-      d.setDate(d.getDate() - 6) // last 7 days inclusive
+      d.setDate(d.getDate() - 6)
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     })()
     const startYmd = startDate || defaultStartYmd
     const endYmd = endDate || `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`
 
-    // Use raw SQL with timezone-adjusted grouping and comparisons; treat 'Izin' and 'Sakit' as leave days
-    const dailyData = await prisma.$queryRaw<Array<{
-      tanggal: string;
-      hadir: bigint;
-      terlambat: bigint;
-      absen: bigint;
-      izin: bigint;
-    }>>`
-      SELECT 
-        DATE(DATE_ADD(a.date, INTERVAL 7 HOUR)) as tanggal,
-        COALESCE(SUM(CASE WHEN a.checkIn IS NOT NULL THEN 1 ELSE 0 END), 0) as hadir,
-        COALESCE(SUM(CASE WHEN a.checkIn IS NOT NULL AND TIME(DATE_ADD(a.checkIn, INTERVAL 7 HOUR)) > '08:00:00' THEN 1 ELSE 0 END), 0) as terlambat,
-        COALESCE(SUM(CASE WHEN a.status IN ('Absen', 'Alpha') THEN 1 ELSE 0 END), 0) as absen,
-        COALESCE(SUM(CASE WHEN a.status IN ('Izin', 'Sakit') THEN 1 ELSE 0 END), 0) as izin
-      FROM Absence a
-      WHERE DATE(DATE_ADD(a.date, INTERVAL 7 HOUR)) BETWEEN ${startYmd} AND ${endYmd}
-      GROUP BY DATE(DATE_ADD(a.date, INTERVAL 7 HOUR))
-      ORDER BY tanggal DESC
-      LIMIT ${limit}
-    `
+    const start = new Date(startYmd + 'T00:00:00.000Z')
+    const end = new Date(endYmd + 'T00:00:00.000Z')
 
-    // Transform the data to match frontend expectations
-    const transformedData = dailyData.map((item: {
-      tanggal: string;
-      hadir: bigint;
-      terlambat: bigint;
-      absen: bigint;
-      izin: bigint;
-    }) => ({
-      tanggal: item.tanggal,
-      hadir: Number(item.hadir),
-      terlambat: Number(item.terlambat),
-      absen: Number(item.absen),
-      izin: Number(item.izin)
-    }))
+    const [absences, holidays, totalEmployees, approvedLeaves] = await Promise.all([
+      prisma.absence.findMany({
+        where: {
+          date: { gte: start, lte: new Date(end.getTime() + 24 * 3600 * 1000 - 1) },
+        },
+        select: { userId: true, date: true, checkIn: true },
+      }),
+      prisma.holiday.findMany({
+        where: { date: { gte: start, lte: end } },
+        select: { date: true, isHalfDay: true },
+      }),
+      prisma.user.count({ where: { statusId: 1 } }),
+      prisma.leaveRequest.findMany({
+        where: {
+          status: 'Approved',
+          OR: [
+            { startDate: { gte: start, lte: end } },
+            { endDate: { gte: start, lte: end } },
+          ],
+        },
+        select: { startDate: true, endDate: true },
+      }),
+    ])
 
-    return { success: true, data: transformedData }
+    const holidayFullSet = new Set<string>(
+      holidays.filter(h => !h.isHalfDay).map(h => new Date(h.date).toISOString().slice(0, 10))
+    )
+
+    const result: Array<{ tanggal: string; hadir: number; terlambat: number; absen: number; izin: number }> = []
+    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+      const local = toZonedTime(new Date(d), timeZone)
+      const ymd = local.toISOString().slice(0, 10)
+      const dow = local.getDay()
+      // Skip weekends and full-day holidays
+      if (dow === 0 || dow === 6 || holidayFullSet.has(ymd)) continue
+
+      const dayAbsences = absences.filter(a => new Date(a.date).toISOString().slice(0, 10) === ymd)
+      const presentSet = new Set<number>()
+      let lateCount = 0
+      dayAbsences.forEach(a => {
+        if (a.checkIn) {
+          presentSet.add(a.userId)
+          const cin = toZonedTime(new Date(a.checkIn), timeZone)
+          if (cin.getHours() > 8 || (cin.getHours() === 8 && cin.getMinutes() > 15)) lateCount += 1
+        }
+      })
+
+      // Count approved leave overlapping this day
+      let dayLeave = 0
+      approvedLeaves.forEach(l => {
+        const s = new Date(l.startDate)
+        const e = new Date(l.endDate)
+        const y = new Date(ymd + 'T00:00:00.000Z')
+        if (y >= new Date(s.toISOString().slice(0,10) + 'T00:00:00.000Z') && y <= new Date(e.toISOString().slice(0,10) + 'T00:00:00.000Z')) {
+          dayLeave += 1
+        }
+      })
+
+      const hadir = presentSet.size
+      const absen = Math.max(totalEmployees - hadir, 0)
+      result.push({ tanggal: ymd, hadir, terlambat: lateCount, absen, izin: dayLeave })
+      if (result.length >= limit) {
+        // keep most recent days; continue loop to maintain correct order if needed
+      }
+    }
+
+    // Sort desc by tanggal and limit
+    const sorted = result.sort((a,b) => (a.tanggal < b.tanggal ? 1 : -1)).slice(0, limit)
+    return { success: true, data: sorted }
   } catch (error) {
     console.error('Error fetching daily data:', error)
     return { success: false, error: 'Failed to fetch daily data' }
@@ -226,59 +260,94 @@ export async function getDailyReport(startDate?: string, endDate?: string, limit
 export async function getMonthlyReport(year: number) {
   try {
     await verifyToken()
+    const timeZone = 'Asia/Jakarta'
+    const totalEmployees = await prisma.user.count({ where: { statusId: 1 } })
 
-    // Use raw SQL with timezone-adjusted month extraction and presence/late logic
-    const monthlyData = await prisma.$queryRaw<Array<{
-      bulan: string;
-      hadir: bigint;
-      terlambat: bigint;
-      absen: bigint;
-      izin: bigint;
-    }>>`
-      SELECT 
-        CASE 
-          WHEN m.month_num = 1 THEN 'Januari'
-          WHEN m.month_num = 2 THEN 'Februari'
-          WHEN m.month_num = 3 THEN 'Maret'
-          WHEN m.month_num = 4 THEN 'April'
-          WHEN m.month_num = 5 THEN 'Mei'
-          WHEN m.month_num = 6 THEN 'Juni'
-          WHEN m.month_num = 7 THEN 'Juli'
-          WHEN m.month_num = 8 THEN 'Agustus'
-          WHEN m.month_num = 9 THEN 'September'
-          WHEN m.month_num = 10 THEN 'Oktober'
-          WHEN m.month_num = 11 THEN 'November'
-          WHEN m.month_num = 12 THEN 'Desember'
-        END as bulan,
-        COALESCE(SUM(CASE WHEN a.checkIn IS NOT NULL THEN 1 ELSE 0 END), 0) as hadir,
-        COALESCE(SUM(CASE WHEN a.checkIn IS NOT NULL AND TIME(DATE_ADD(a.checkIn, INTERVAL 7 HOUR)) > '08:00:00' THEN 1 ELSE 0 END), 0) as terlambat,
-        COALESCE(SUM(CASE WHEN a.status IN ('Absen', 'Alpha') THEN 1 ELSE 0 END), 0) as absen,
-        COALESCE(SUM(CASE WHEN a.status = 'Izin' THEN 1 ELSE 0 END), 0) as izin
-      FROM (
-        SELECT 1 as month_num UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6
-        UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
-      ) m
-      LEFT JOIN Absence a ON MONTH(DATE_ADD(a.date, INTERVAL 7 HOUR)) = m.month_num AND YEAR(DATE_ADD(a.date, INTERVAL 7 HOUR)) = ${year}
-      GROUP BY m.month_num
-      ORDER BY m.month_num
-    `
+    const startYear = new Date(`${year}-01-01T00:00:00.000Z`)
+    const endYear = new Date(`${year}-12-31T00:00:00.000Z`)
 
-    // Transform the data to match frontend expectations
-    const transformedData = monthlyData.map((item: {
-      bulan: string;
-      hadir: bigint;
-      terlambat: bigint;
-      absen: bigint;
-      izin: bigint;
-    }) => ({
-      bulan: item.bulan,
-      hadir: Number(item.hadir),
-      terlambat: Number(item.terlambat),
-      absen: Number(item.absen),
-      izin: Number(item.izin)
-    }))
+    const [absences, holidays, approvedLeaves] = await Promise.all([
+      prisma.absence.findMany({
+        where: { date: { gte: startYear, lte: endYear } },
+        select: { userId: true, date: true, checkIn: true },
+      }),
+      prisma.holiday.findMany({
+        where: { date: { gte: startYear, lte: endYear } },
+        select: { date: true, isHalfDay: true },
+      }),
+      prisma.leaveRequest.findMany({
+        where: { status: 'Approved', startDate: { lte: endYear }, endDate: { gte: startYear } },
+        select: { startDate: true, endDate: true },
+      }),
+    ])
 
-    return { success: true, data: transformedData }
+    const holidayFullSet = new Set<string>(
+      holidays.filter(h => !h.isHalfDay).map(h => new Date(h.date).toISOString().slice(0, 10))
+    )
+
+    const months: Array<{
+      bulan: string
+      workingDays: number
+      presentUnique: number
+      absent: number
+      late: number
+      leaveDays: number
+      attendancePct: number
+    }> = []
+
+    for (let m = 0; m < 12; m++) {
+      const first = new Date(Date.UTC(year, m, 1))
+      const last = new Date(Date.UTC(year, m + 1, 0))
+      let workingDays = 0
+      let presentUniqueSum = 0
+      let lateSum = 0
+      let leaveDays = 0
+
+      for (let d = new Date(first); d <= last; d.setUTCDate(d.getUTCDate() + 1)) {
+        const local = toZonedTime(new Date(d), timeZone)
+        const ymd = local.toISOString().slice(0, 10)
+        const dow = local.getDay()
+        if (dow === 0 || dow === 6 || holidayFullSet.has(ymd)) continue
+        workingDays += 1
+
+        const dayAbsences = absences.filter(a => new Date(a.date).toISOString().slice(0, 10) === ymd)
+        const presentSet = new Set<number>()
+        dayAbsences.forEach(a => {
+          if (a.checkIn) {
+            presentSet.add(a.userId)
+            const cin = toZonedTime(new Date(a.checkIn), timeZone)
+            if (cin.getHours() > 8 || (cin.getHours() === 8 && cin.getMinutes() > 15)) lateSum += 1
+          }
+        })
+        presentUniqueSum += presentSet.size
+
+        // Leave days overlapping this day
+        approvedLeaves.forEach(l => {
+          const y = new Date(ymd + 'T00:00:00.000Z')
+          const s = new Date(l.startDate)
+          const e = new Date(l.endDate)
+          if (y >= new Date(s.toISOString().slice(0,10) + 'T00:00:00.000Z') && y <= new Date(e.toISOString().slice(0,10) + 'T00:00:00.000Z')) {
+            leaveDays += 1
+          }
+        })
+      }
+
+      const totalPossible = workingDays * totalEmployees
+      const attendancePct = totalPossible > 0 ? (presentUniqueSum / totalPossible) * 100 : 0
+      const absent = Math.max(totalPossible - presentUniqueSum, 0)
+      const bulanNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
+      months.push({
+        bulan: bulanNames[m],
+        workingDays,
+        presentUnique: presentUniqueSum,
+        absent,
+        late: lateSum,
+        leaveDays,
+        attendancePct: Math.round(attendancePct * 100) / 100,
+      })
+    }
+
+    return { success: true, data: months }
   } catch (error) {
     console.error('Error fetching monthly data:', error)
     return { success: false, error: 'Failed to fetch monthly data' }
@@ -356,7 +425,6 @@ export async function getComprehensiveReport(startDate?: string, endDate?: strin
     await verifyToken()
 
     const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-    console.log('Comprehensive report params:', { startDate, endDate, start: start.getFullYear() })
 
     // Get all data in parallel for better performance
     const [summaryResult, monthlyResult, lateEmployeesResult, dailyResult] = await Promise.all([
@@ -365,13 +433,6 @@ export async function getComprehensiveReport(startDate?: string, endDate?: strin
       getLateEmployeesReport(startDate, endDate, 10),
       getDailyReport(startDate, endDate, 7)
     ])
-
-    console.log('Comprehensive report results:', {
-      summary: summaryResult.success ? 'success' : summaryResult.error,
-      monthly: monthlyResult.success ? 'success' : monthlyResult.error,
-      lateEmployees: lateEmployeesResult.success ? 'success' : lateEmployeesResult.error,
-      daily: dailyResult.success ? 'success' : dailyResult.error
-    })
 
     return {
       success: true,

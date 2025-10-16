@@ -66,10 +66,12 @@ interface SummaryData {
 
 interface MonthlyData {
   bulan: string;
-  hadir: number;
-  terlambat: number;
-  absen: number;
-  izin: number;
+  workingDays: number;
+  presentUnique: number;
+  absent: number;
+  late: number;
+  leaveDays: number;
+  attendancePct: number;
 }
 
 interface LateEmployee {
@@ -258,16 +260,15 @@ export default function LaporanPage() {
           ['Izin Ditolak', summaryData?.izinDitolak || 0]
         ],
         'Rekap Bulanan': [
-          ['Bulan', 'Hadir', 'Terlambat', 'Absen', 'Izin', 'Persentase (%)'],
+          ['Bulan', 'Hari Kerja', 'Hadir Unik', 'Terlambat', 'Absen', 'Izin', 'Persentase (%)'],
           ...monthlyData.map(item => [
             item.bulan,
-            item.hadir,
-            item.terlambat,
-            item.absen,
-            item.izin,
-            item.hadir + item.absen + item.izin > 0 
-              ? ((item.hadir / (item.hadir + item.absen + item.izin)) * 100).toFixed(1)
-              : 0
+            item.workingDays,
+            item.presentUnique,
+            item.late,
+            item.absent,
+            item.leaveDays,
+            item.attendancePct.toFixed(2)
           ])
         ],
         'Karyawan Terlambat': [
@@ -550,7 +551,8 @@ export default function LaporanPage() {
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-3 px-4">Bulan</th>
-                      <th className="text-right py-3 px-4">Hadir</th>
+                      <th className="text-right py-3 px-4">Hari Kerja</th>
+                      <th className="text-right py-3 px-4">Hadir Unik</th>
                       <th className="text-right py-3 px-4">Terlambat</th>
                       <th className="text-right py-3 px-4">Absen</th>
                       <th className="text-right py-3 px-4">Izin</th>
@@ -559,19 +561,19 @@ export default function LaporanPage() {
                   </thead>
                   <tbody>
                     {monthlyData.map((item, index) => {
-                      const total = item.hadir + item.absen + item.izin;
-                      const persentase = total > 0 ? ((item.hadir / total) * 100).toFixed(1) : "0";
+                      const persentase = item.attendancePct.toFixed(2);
                       return (
                         <tr key={index} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4 font-medium">{item.bulan}</td>
-                          <td className="text-right py-3 px-4">{item.hadir.toLocaleString()}</td>
+                          <td className="text-right py-3 px-4">{item.workingDays.toLocaleString()}</td>
+                          <td className="text-right py-3 px-4">{item.presentUnique.toLocaleString()}</td>
                           <td className="text-right py-3 px-4">
-                            <Badge variant={item.terlambat > 40 ? "destructive" : "secondary"}>
-                              {item.terlambat}
+                            <Badge variant={item.late > 40 ? "destructive" : "secondary"}>
+                              {item.late}
                             </Badge>
                           </td>
-                          <td className="text-right py-3 px-4">{item.absen}</td>
-                          <td className="text-right py-3 px-4">{item.izin}</td>
+                          <td className="text-right py-3 px-4">{item.absent}</td>
+                          <td className="text-right py-3 px-4">{item.leaveDays}</td>
                           <td className="text-right py-3 px-4 font-medium">
                             <Badge variant={parseFloat(persentase) >= 95 ? "default" : "outline"}>
                               {persentase}%

@@ -448,7 +448,7 @@ export default function IzinPage() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" onClick={() => window.location.href = `/admin/dashboard/izin/${izin.id}`}>
                             <Eye className="h-4 w-4" />
                           </Button>
                           {izin.status === "Pending" && (
