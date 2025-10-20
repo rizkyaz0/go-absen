@@ -31,6 +31,7 @@ import {
   getComprehensiveReport 
 } from '@/lib/actions';
 import { showExportSuccessToast, showExportErrorToast } from "@/lib/toast-utils";
+import type { WorkBook } from 'xlsx';
 
 // Helper function untuk mendapatkan inisial nama
 const getInitials = (name: string | null | undefined): string => {
@@ -254,15 +255,17 @@ export default function LaporanPage() {
       const yStart = headerHeight + margin;
       pdf.addImage(imgData, 'PNG', margin, yStart, imgWidth, imgHeight);
       heightLeft -= contentHeight;
+      let pageCount = 1;
       while (heightLeft > 0) {
         pdf.addPage();
+        pageCount += 1;
         const yPosition = yStart - (imgHeight - heightLeft);
         pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
         heightLeft -= contentHeight;
       }
 
       // Header & footer on every page
-      const totalPages = pdf.getNumberOfPages();
+      const totalPages = pageCount;
       const generatedAt = new Date().toLocaleString('id-ID');
       for (let i = 1; i <= totalPages; i++) {
         pdf.setPage(i);
@@ -282,7 +285,11 @@ export default function LaporanPage() {
         pdf.setFontSize(8);
         pdf.setTextColor(120);
         pdf.text(`Dibuat: ${generatedAt}`, margin, pageHeight - 5);
-        pdf.text(`Halaman ${i} dari ${totalPages}`, pageWidth - margin, pageHeight - 5, { align: 'right' });
+        const pageText = `Halaman ${i} dari ${totalPages}`;
+        const textWidth = (pdf as unknown as { getTextWidth?: (text: string) => number }).getTextWidth
+          ? (pdf as unknown as { getTextWidth: (text: string) => number }).getTextWidth(pageText)
+          : pageText.length * 2.5; // fallback approximate width
+        pdf.text(pageText, pageWidth - margin - textWidth, pageHeight - 5);
       }
 
       pdf.save(`laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.pdf`);
@@ -296,7 +303,7 @@ export default function LaporanPage() {
   };
 
   // Export to Excel
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
       setExportingExcel(true);
 
@@ -343,12 +350,12 @@ export default function LaporanPage() {
             item.izin
           ])
         ]
-      } as const;
+      };
 
-      const workbook = XLSX.utils.book_new();
+      const workbook = XLSX.utils.book_new() as WorkBook;
 
       // Workbook properties
-      (workbook as any).Props = {
+      workbook.Props = {
         Title: 'Laporan Absensi',
         Author: 'Go Absen',
         CreatedDate: new Date()
@@ -383,8 +390,8 @@ export default function LaporanPage() {
 
       // Data sheets
       (Object.keys(excelData) as Array<keyof typeof excelData>).forEach(sheetName => {
-        const rows = excelData[sheetName];
-        const worksheet = XLSX.utils.aoa_to_sheet(rows as unknown[][]);
+        const rows = excelData[sheetName] as (string | number)[][];
+        const worksheet = XLSX.utils.aoa_to_sheet(rows as (string | number)[][]);
         worksheet['!cols'] = autoFit(rows as unknown[][]);
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
       });
