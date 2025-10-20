@@ -192,7 +192,15 @@ export default function AdminDashboard() {
 
     // Hanya karyawan aktif yang dihitung sebagai total
     const totalKaryawan = usersData.filter((u) => u.statusId === 1).length;
-    const absenHariIni = Math.max(totalKaryawan - hadirHariIni, 0);
+    // Kurangi absen dengan jumlah karyawan yang memiliki izin approved hari ini
+    const approvedLeaveToday = leaveData.filter((l) => {
+      if (l.status !== 'Approved') return false;
+      const s = new Date(l.startDate);
+      const e = new Date(l.endDate);
+      const today0 = new Date(todayString + 'T00:00:00.000Z');
+      return today0 >= new Date(s.toISOString().slice(0,10) + 'T00:00:00.000Z') && today0 <= new Date(e.toISOString().slice(0,10) + 'T00:00:00.000Z');
+    }).length;
+    const absenHariIni = Math.max(totalKaryawan - hadirHariIni - approvedLeaveToday, 0);
     const tingkatKehadiran = totalKaryawan > 0 ? (hadirHariIni / totalKaryawan) * 100 : 0;
 
     // Leave requests stats
@@ -413,6 +421,25 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.approvedIzin}</div>
             <p className="text-xs text-muted-foreground">Bulan ini</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Izin Hari Ini</CardTitle>
+            <Calendar className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{
+              leaveRequests.filter(l => {
+                if (l.status !== 'Approved') return false;
+                const s = new Date(l.startDate);
+                const e = new Date(l.endDate);
+                const today0 = new Date(todayString + 'T00:00:00.000Z');
+                return today0 >= new Date(s.toISOString().slice(0,10) + 'T00:00:00.000Z') && today0 <= new Date(e.toISOString().slice(0,10) + 'T00:00:00.000Z');
+              }).length
+            }</div>
+            <p className="text-xs text-muted-foreground">Karyawan berizin hari ini</p>
           </CardContent>
         </Card>
 

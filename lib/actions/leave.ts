@@ -180,9 +180,44 @@ export async function resetMonthlyLeaveQuota() {
       return { error: 'Forbidden' }
     }
 
-    // Buat record reset pada tabel ResetLog jika ada, atau gunakan prisma.$executeRaw untuk catatan opsional.
-    // Karena skema belum memiliki tabel khusus, kita tidak menyimpan apapun.
-    // Perhitungan jatah cuti sudah berbasis bulan berjalan di getUserLeaveStats, jadi tidak perlu update data.
+    // Catat reset ke tabel LeaveReset (untuk audit trail)
+    await prisma.leaveReset.create({ data: {} })
+
+    // Setiap user akan DIJAMIN memiliki sisa 2 hari bulan ini dengan cara
+    // mengatur quota(user, bulan) = usedDays + 2 sehingga remaining = quota - usedDays = 2
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth() + 1
+
+    const periodStart = new Date(year, month - 1, 1)
+    const periodEnd = new Date(year, month, 0)
+
+    const activeUsers = await prisma.user.findMany({ where: { statusId: 1 }, select: { id: true } })
+    for (const u of activeUsers) {
+      const approvedLeaves = await prisma.leaveRequest.findMany({
+        where: {
+          userId: u.id,
+          status: 'Approved',
+          startDate: { gte: periodStart, lte: periodEnd },
+        },
+        select: { startDate: true, endDate: true },
+      })
+
+      let usedLeaveDays = 0
+      for (const l of approvedLeaves) {
+        const s = new Date(l.startDate)
+        const e = new Date(l.endDate)
+        const diff = Math.floor((e.getTime() - s.getTime()) / (1000 * 3600 * 24)) + 1
+        usedLeaveDays += Math.max(diff, 0)
+      }
+
+      const targetQuota = usedLeaveDays + 2
+      await prisma.leaveQuota.upsert({
+        where: { userId_year_month: { userId: u.id, year, month } },
+        update: { quota: targetQuota },
+        create: { userId: u.id, year, month, quota: targetQuota },
+      })
+    }
 
     // Revalidate terkait halaman izin dan dashboard
     revalidateTag('leave')

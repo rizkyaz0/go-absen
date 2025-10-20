@@ -241,7 +241,8 @@ export async function getDailyReport(startDate?: string, endDate?: string, limit
       })
 
       const hadir = presentSet.size
-      const absen = Math.max(totalEmployees - hadir, 0)
+      // Kurangi absen dengan jumlah karyawan yang sedang izin approved
+      const absen = Math.max(totalEmployees - hadir - dayLeave, 0)
       result.push({ tanggal: ymd, hadir, terlambat: lateCount, absen, izin: dayLeave })
       if (result.length >= limit) {
         // keep most recent days; continue loop to maintain correct order if needed
