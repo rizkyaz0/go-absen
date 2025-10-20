@@ -11,7 +11,6 @@ import {
   Calendar, 
   Download, 
   Filter, 
-  Printer, 
   Search, 
   BarChart3, 
   PieChart,
@@ -98,7 +97,6 @@ export default function LaporanPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   
   // Data states
@@ -107,8 +105,7 @@ export default function LaporanPage() {
   const [lateEmployees, setLateEmployees] = useState<LateEmployee[]>([]);
   const [dailyData, setDailyData] = useState<DailyData[]>([]);
 
-  // Ref untuk print
-  const printRef = useRef<HTMLDivElement>(null);
+  // Ref untuk print (removed with PDF export)
 
   // Fetch data functions - optimized version
   const fetchAllData = async () => {
@@ -208,99 +205,7 @@ export default function LaporanPage() {
       )
     : [];
 
-  // Export to PDF
-  const handleExportPDF = async () => {
-    if (!printRef.current) return;
-    
-    try {
-      setExportingPdf(true);
-
-      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-        import('jspdf'),
-        import('html2canvas')
-      ]);
-
-      const canvas = await html2canvas(printRef.current, {
-        scale: Math.min(2, window.devicePixelRatio || 1),
-        useCORS: true,
-        allowTaint: true
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-
-      // Metadata
-      const periodText = `Periode: ${new Date(filterTanggal.dari).toLocaleDateString('id-ID')} - ${new Date(filterTanggal.hingga).toLocaleDateString('id-ID')}`;
-      pdf.setProperties({
-        title: `Laporan Absensi ${safeSplit(new Date().toISOString(), 'T')[0]}`,
-        subject: 'Laporan Absensi',
-        author: 'Go Absen',
-        creator: 'Go Absen App'
-      });
-
-      // Layout sizes
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      const headerHeight = 18;
-      const footerHeight = 10;
-      const contentWidth = pageWidth - margin * 2;
-      const contentHeight = pageHeight - headerHeight - footerHeight;
-
-      const imgWidth = contentWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      // Render content image across multiple pages within content area
-      let heightLeft = imgHeight;
-      const yStart = headerHeight + margin;
-      pdf.addImage(imgData, 'PNG', margin, yStart, imgWidth, imgHeight);
-      heightLeft -= contentHeight;
-      let pageCount = 1;
-      while (heightLeft > 0) {
-        pdf.addPage();
-        pageCount += 1;
-        const yPosition = yStart - (imgHeight - heightLeft);
-        pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
-        heightLeft -= contentHeight;
-      }
-
-      // Header & footer on every page
-      const totalPages = pageCount;
-      const generatedAt = new Date().toLocaleString('id-ID');
-      for (let i = 1; i <= totalPages; i++) {
-        pdf.setPage(i);
-        // Header
-        pdf.setFontSize(12);
-        pdf.setTextColor(0);
-        pdf.text('Laporan Absensi', margin, 10);
-        pdf.setFontSize(9);
-        pdf.setTextColor(100);
-        pdf.text(periodText, margin, 16);
-        pdf.setDrawColor(220);
-        pdf.line(margin, headerHeight, pageWidth - margin, headerHeight);
-
-        // Footer
-        pdf.setDrawColor(220);
-        pdf.line(margin, pageHeight - footerHeight, pageWidth - margin, pageHeight - footerHeight);
-        pdf.setFontSize(8);
-        pdf.setTextColor(120);
-        pdf.text(`Dibuat: ${generatedAt}`, margin, pageHeight - 5);
-        const pageText = `Halaman ${i} dari ${totalPages}`;
-        const textWidth = (pdf as unknown as { getTextWidth?: (text: string) => number }).getTextWidth
-          ? (pdf as unknown as { getTextWidth: (text: string) => number }).getTextWidth(pageText)
-          : pageText.length * 2.5; // fallback approximate width
-        pdf.text(pageText, pageWidth - margin - textWidth, pageHeight - 5);
-      }
-
-      pdf.save(`laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.pdf`);
-      showExportSuccessToast('PDF');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      showExportErrorToast('PDF');
-    } finally {
-      setExportingPdf(false);
-    }
-  };
+  // Export to PDF removed per request
 
   // Export to Excel
   const handleExportExcel = async () => {
@@ -440,19 +345,6 @@ export default function LaporanPage() {
         </div>
         <div className="flex gap-2">
           <Button
-            variant="outline"
-            onClick={handleExportPDF}
-            disabled={loading || exportingPdf}
-            aria-busy={exportingPdf}
-          >
-            {exportingPdf ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Printer className="w-4 h-4 mr-2" />
-            )}
-            {exportingPdf ? 'Mencetak…' : 'Print PDF'}
-          </Button>
-          <Button
             onClick={handleExportExcel}
             disabled={loading || exportingExcel}
             aria-busy={exportingExcel}
@@ -576,8 +468,7 @@ export default function LaporanPage() {
         </div>
       )}
 
-      {/* Content untuk print */}
-      <div ref={printRef} className="space-y-6">
+      <div className="space-y-6">
         {/* Summary Stats */}
         {summaryData ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">

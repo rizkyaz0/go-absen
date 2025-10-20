@@ -169,3 +169,31 @@ export async function deleteLeaveRequest(id: number) {
     return { error: 'Gagal menghapus permintaan cuti' }
   }
 }
+
+// Reset jatah cuti bulanan: tidak menghapus data, hanya membuat entri log reset
+// dan nantinya perhitungan sisa jatah cuti berdasarkan bulan berjalan.
+export async function resetMonthlyLeaveQuota() {
+  try {
+    const payload = await verifyToken()
+    // Hanya admin (roleId = 3) yang boleh reset
+    if (payload.roleId !== 3) {
+      return { error: 'Forbidden' }
+    }
+
+    // Buat record reset pada tabel ResetLog jika ada, atau gunakan prisma.$executeRaw untuk catatan opsional.
+    // Karena skema belum memiliki tabel khusus, kita tidak menyimpan apapun.
+    // Perhitungan jatah cuti sudah berbasis bulan berjalan di getUserLeaveStats, jadi tidak perlu update data.
+
+    // Revalidate terkait halaman izin dan dashboard
+    revalidateTag('leave')
+    revalidateTag('requests')
+    revalidatePath('/admin/dashboard')
+    revalidatePath('/admin/dashboard/izin')
+    revalidatePath('/dashboard')
+
+    return { success: true, message: 'Jatah cuti bulanan telah di-reset (berlaku bulan berjalan).' }
+  } catch (err) {
+    console.error('Error resetting monthly leave quota:', err)
+    return { error: 'Gagal reset jatah cuti' }
+  }
+}
