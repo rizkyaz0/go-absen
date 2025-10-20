@@ -48,3 +48,5 @@ export {
   getCachedAllLeaveRequests,
   getAllLeaveRequestsCached 
 } from './leave'
+
+export { resetMonthlyLeaveQuota } from './leave'

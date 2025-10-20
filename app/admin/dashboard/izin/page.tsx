@@ -26,8 +26,9 @@ import {
   X,
   FileText
 } from "lucide-react";
-import { getAllLeaveRequests, updateLeaveRequestStatus } from "@/lib/actions";
+import { getAllLeaveRequests, updateLeaveRequestStatus, resetMonthlyLeaveQuota } from "@/lib/actions";
 import { showErrorToast, showLeaveStatusUpdatedToast, showSuccessToast } from "@/lib/toast-utils";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { Toaster } from "@/components/ui/sonner";
 
 interface Izin {
@@ -56,6 +57,8 @@ export default function IzinPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Fetch izin dari API
   useEffect(() => {
@@ -234,10 +237,15 @@ export default function IzinPage() {
             </p>
           )}
         </div>
+        <div className="flex items-center gap-2">
         <Button onClick={refreshData} disabled={loading} variant="outline">
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
+        <Button onClick={() => setShowResetModal(true)} variant="destructive">
+          Reset Jatah Cuti Bulanan
+        </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -484,6 +492,33 @@ export default function IzinPage() {
 
       {/* Toast Notifications */}
       <Toaster />
+
+      <ConfirmModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={async () => {
+          try {
+            setIsResetting(true);
+            const result = await resetMonthlyLeaveQuota();
+            if ('error' in result && result.error) {
+              showErrorToast('Gagal reset jatah cuti', result.error);
+              return;
+            }
+            showSuccessToast('Berhasil', 'Jatah cuti bulan berjalan telah di-reset');
+            await refreshData();
+          } finally {
+            setIsResetting(false);
+            setShowResetModal(false);
+          }
+        }}
+        title="Reset Jatah Cuti Bulanan"
+        description="Tindakan ini akan mengaktifkan kembali jatah cuti untuk bulan berjalan tanpa menghapus data cuti sebelumnya. Lanjutkan?"
+        confirmText={isResetting ? 'Memproses...' : 'Ya, Reset Sekarang'}
+        cancelText="Batal"
+        variant="destructive"
+        isLoading={isResetting}
+        type="warning"
+      />
     </div>
   );
 }

@@ -198,8 +198,14 @@ export const getCachedUserLeaveStats = unstable_cache(
       usedLeaveDays += daysDiff
     })
 
-    // Jatah cuti per bulan = 2 hari
-    const monthlyLeaveQuota = 2
+    // Kuota default 2, tetapi cek override di LeaveQuota
+    let monthlyLeaveQuota = 2
+    const quotaRecord = await prisma.leaveQuota.findUnique({
+      where: { userId_year_month: { userId, year, month } },
+      select: { quota: true },
+    })
+    if (quotaRecord?.quota != null) monthlyLeaveQuota = quotaRecord.quota
+
     const remainingLeave = Math.max(0, monthlyLeaveQuota - usedLeaveDays)
 
     return {
@@ -273,8 +279,14 @@ export const getUserLeaveStats = cache(async (userId: number) => {
       usedLeaveDays += daysDiff
     })
 
-    // Jatah cuti per bulan = 2 hari
-    const monthlyLeaveQuota = 2
+    // Kuota default 2, tetapi cek override di LeaveQuota
+    let monthlyLeaveQuota = 2
+    const quotaRecord = await prisma.leaveQuota.findUnique({
+      where: { userId_year_month: { userId, year, month } },
+      select: { quota: true },
+    })
+    if (quotaRecord?.quota != null) monthlyLeaveQuota = quotaRecord.quota
+
     const remainingLeave = Math.max(0, monthlyLeaveQuota - usedLeaveDays)
 
     return {
