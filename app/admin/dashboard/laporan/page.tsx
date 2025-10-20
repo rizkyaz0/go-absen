@@ -23,9 +23,6 @@ import {
   Loader2,
   // Construction
 } from "lucide-react";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import * as XLSX from 'xlsx';
 import { 
   getSummaryReport, 
   getMonthlyReport, 
@@ -100,6 +97,8 @@ export default function LaporanPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
   
   // Data states
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
@@ -213,29 +212,77 @@ export default function LaporanPage() {
     if (!printRef.current) return;
     
     try {
+      setExportingPdf(true);
+
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas')
+      ]);
+
       const canvas = await html2canvas(printRef.current, {
-        scale: 2,
+        scale: Math.min(2, window.devicePixelRatio || 1),
         useCORS: true,
         allowTaint: true
       });
-      
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 295;
+
+      // Metadata
+      const periodText = `Periode: ${new Date(filterTanggal.dari).toLocaleDateString('id-ID')} - ${new Date(filterTanggal.hingga).toLocaleDateString('id-ID')}`;
+      pdf.setProperties({
+        title: `Laporan Absensi ${safeSplit(new Date().toISOString(), 'T')[0]}`,
+        subject: 'Laporan Absensi',
+        author: 'Go Absen',
+        creator: 'Go Absen App'
+      });
+
+      // Layout sizes
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const headerHeight = 18;
+      const footerHeight = 10;
+      const contentWidth = pageWidth - margin * 2;
+      const contentHeight = pageHeight - headerHeight - footerHeight;
+
+      const imgWidth = contentWidth;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      // Render content image across multiple pages within content area
       let heightLeft = imgHeight;
-
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
+      const yStart = headerHeight + margin;
+      pdf.addImage(imgData, 'PNG', margin, yStart, imgWidth, imgHeight);
+      heightLeft -= contentHeight;
+      while (heightLeft > 0) {
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        const yPosition = yStart - (imgHeight - heightLeft);
+        pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
+        heightLeft -= contentHeight;
+      }
+
+      // Header & footer on every page
+      const totalPages = pdf.getNumberOfPages();
+      const generatedAt = new Date().toLocaleString('id-ID');
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        // Header
+        pdf.setFontSize(12);
+        pdf.setTextColor(0);
+        pdf.text('Laporan Absensi', margin, 10);
+        pdf.setFontSize(9);
+        pdf.setTextColor(100);
+        pdf.text(periodText, margin, 16);
+        pdf.setDrawColor(220);
+        pdf.line(margin, headerHeight, pageWidth - margin, headerHeight);
+
+        // Footer
+        pdf.setDrawColor(220);
+        pdf.line(margin, pageHeight - footerHeight, pageWidth - margin, pageHeight - footerHeight);
+        pdf.setFontSize(8);
+        pdf.setTextColor(120);
+        pdf.text(`Dibuat: ${generatedAt}`, margin, pageHeight - 5);
+        pdf.text(`Halaman ${i} dari ${totalPages}`, pageWidth - margin, pageHeight - 5, { align: 'right' });
       }
 
       pdf.save(`laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.pdf`);
@@ -243,12 +290,18 @@ export default function LaporanPage() {
     } catch (error) {
       console.error('Error generating PDF:', error);
       showExportErrorToast('PDF');
+    } finally {
+      setExportingPdf(false);
     }
   };
 
   // Export to Excel
   const handleExportExcel = () => {
     try {
+      setExportingExcel(true);
+
+      const XLSX = await import('xlsx');
+
       // Data untuk Excel
       const excelData = {
         'Ringkasan': [
@@ -290,20 +343,60 @@ export default function LaporanPage() {
             item.izin
           ])
         ]
-      };
+      } as const;
 
       const workbook = XLSX.utils.book_new();
-      
-      Object.keys(excelData).forEach(sheetName => {
-        const worksheet = XLSX.utils.aoa_to_sheet(excelData[sheetName as keyof typeof excelData]);
+
+      // Workbook properties
+      (workbook as any).Props = {
+        Title: 'Laporan Absensi',
+        Author: 'Go Absen',
+        CreatedDate: new Date()
+      };
+
+      // Info sheet
+      const infoSheet = XLSX.utils.aoa_to_sheet([
+        ['Laporan Absensi'],
+        ['Periode', `${new Date(filterTanggal.dari).toLocaleDateString('id-ID')} - ${new Date(filterTanggal.hingga).toLocaleDateString('id-ID')}`],
+        ['Dibuat pada', new Date().toLocaleString('id-ID')],
+        ['Total Karyawan Terlambat', filteredKaryawan.length]
+      ]);
+      infoSheet['!cols'] = [{ wch: 28 }, { wch: 40 }];
+      XLSX.utils.book_append_sheet(workbook, infoSheet, 'Informasi');
+
+      // Helper to auto fit columns
+      const autoFit = (rows: unknown[][]) => {
+        if (!rows.length) return [] as Array<{ wch: number }>;
+        const colCount = rows[0].length;
+        const widths: Array<{ wch: number }> = [];
+        for (let c = 0; c < colCount; c++) {
+          let max = 10;
+          for (let r = 0; r < rows.length; r++) {
+            const cell = rows[r]?.[c];
+            const len = String(cell ?? '').length;
+            if (len > max) max = len;
+          }
+          widths.push({ wch: Math.min(60, max + 2) });
+        }
+        return widths;
+      };
+
+      // Data sheets
+      (Object.keys(excelData) as Array<keyof typeof excelData>).forEach(sheetName => {
+        const rows = excelData[sheetName];
+        const worksheet = XLSX.utils.aoa_to_sheet(rows as unknown[][]);
+        worksheet['!cols'] = autoFit(rows as unknown[][]);
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
       });
 
-      XLSX.writeFile(workbook, `laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.xlsx`);
+      const fileName = `laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
       showExportSuccessToast('Excel');
     } catch (error) {
       console.error('Error generating Excel:', error);
       showExportErrorToast('Excel');
+    } finally {
+      setExportingExcel(false);
     }
   };
 
@@ -339,13 +432,30 @@ export default function LaporanPage() {
           )}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportPDF} disabled={loading}>
-            <Printer className="w-4 h-4 mr-2" />
-            Print PDF
+          <Button
+            variant="outline"
+            onClick={handleExportPDF}
+            disabled={loading || exportingPdf}
+            aria-busy={exportingPdf}
+          >
+            {exportingPdf ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Printer className="w-4 h-4 mr-2" />
+            )}
+            {exportingPdf ? 'Mencetak…' : 'Print PDF'}
           </Button>
-          <Button onClick={handleExportExcel} disabled={loading}>
-            <Download className="w-4 h-4 mr-2" />
-            Export Excel
+          <Button
+            onClick={handleExportExcel}
+            disabled={loading || exportingExcel}
+            aria-busy={exportingExcel}
+          >
+            {exportingExcel ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            {exportingExcel ? 'Mengekspor…' : 'Export Excel'}
           </Button>
         </div>
       </div>
