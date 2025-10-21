@@ -77,3 +77,31 @@ model LeaveRequest {
   updatedAt  DateTime  @updatedAt
   user       User      @relation(fields: [userId], references: [id])
 }
+
+// Hari libur/tanggal merah yang ditentukan admin
+model Holiday {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @unique
+  name      String
+  isHalfDay Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Log reset jatah cuti global
+model LeaveReset {
+  id      Int      @id @default(autoincrement())
+  resetAt DateTime @default(now())
+}
+
+// Kuota cuti per user per bulan (override default 2)
+model LeaveQuota {
+  id     Int @id @default(autoincrement())
+  userId Int
+  year   Int
+  month  Int
+  quota  Int @default(2)
+  user   User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, year, month])
+}

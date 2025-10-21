@@ -1,0 +1,158 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { createUser } from "@/lib/actions";
+import { showErrorToast, showUserAddedToast } from "@/lib/toast-utils";
+
+export default function TambahKaryawanPage() {
+  const router = useRouter();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [roleId, setRoleId] = useState<number | undefined>();
+  const [statusId, setStatusId] = useState<number | undefined>();
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const result = await createUser({
+        name,
+        email,
+        password,
+        roleId: roleId!,
+        statusId: statusId!,
+      });
+
+      if (result.error) {
+        showErrorToast("Gagal menambah karyawan", result.error);
+        return;
+      }
+
+      showUserAddedToast(name);
+      router.push("/admin/dashboard/karyawan");
+    } catch (error) {
+      showErrorToast("Gagal menambah karyawan", (error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-3xl font-bold mb-4">Tambah Karyawan</h2>
+
+      <Button
+        variant="outline"
+        className="mb-6"
+        onClick={() => router.push("/admin/dashboard/karyawan")}
+      >
+        Kembali
+      </Button>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Form Tambah Karyawan</CardTitle>
+          <CardDescription>Isi data karyawan baru</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
+            <div>
+              <Label htmlFor="name">Nama</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Masukkan nama karyawan"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Masukkan email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Masukkan password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="role">Role</Label>
+              <Select
+                onValueChange={(value) => setRoleId(Number(value))}
+                value={roleId?.toString() || ""}
+              >
+                <SelectTrigger id="role" className="w-full">
+                  <SelectValue placeholder="Pilih role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Project Manager</SelectItem>
+                  <SelectItem value="2">Developer</SelectItem>
+                  <SelectItem value="3">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select
+                onValueChange={(value) => setStatusId(Number(value))}
+                value={statusId?.toString() || ""}
+              >
+                <SelectTrigger id="status" className="w-full">
+                  <SelectValue placeholder="Pilih status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Active</SelectItem>
+                  <SelectItem value="2">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button type="submit" disabled={loading}>
+              {loading ? "Menambahkan..." : "Tambah"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
