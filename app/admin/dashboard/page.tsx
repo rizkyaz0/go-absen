@@ -10,20 +10,20 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  CheckCircle, 
-  XCircle, 
-  Users, 
-  Clock, 
+import {
+  CheckCircle,
+  XCircle,
+  Users,
+  Clock,
   Calendar,
   AlertTriangle,
   Activity,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
-import { 
-  getAllUsersCached, 
-  getAllAbsencesCached, 
-  getAllLeaveRequestsCached
+import {
+  getAllUsersCached,
+  getAllAbsencesCached,
+  getAllLeaveRequestsCached,
 } from "@/lib/actions";
 import { showErrorToast, showDataLoadedToast } from "@/lib/toast-utils";
 import { Toaster } from "@/components/ui/sonner";
@@ -82,7 +82,7 @@ export default function AdminDashboard() {
     approvedIzin: 0,
     rejectedIzin: 0,
     tingkatKehadiran: 0,
-    rataRataKehadiran: 0
+    rataRataKehadiran: 0,
   });
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -97,54 +97,69 @@ export default function AdminDashboard() {
         const [usersResult, absencesResult, leaveResult] = await Promise.all([
           getAllUsersCached(),
           getAllAbsencesCached(),
-          getAllLeaveRequestsCached()
+          getAllLeaveRequestsCached(),
         ]);
 
         if (isMounted) {
           // Process users data
-          if ('success' in usersResult && usersResult.success) {
-            showDataLoadedToast("Karyawan", usersResult.data.length);
-          } else if ('error' in usersResult) {
+          if ("success" in usersResult && usersResult.success) {
+          } else if ("error" in usersResult) {
             showErrorToast("Gagal memuat data karyawan", usersResult.error);
           }
-          
+
           // Process absences data
-          if ('success' in absencesResult && absencesResult.success) {
-            const normalized: Absence[] = (absencesResult.data as Array<Absence | (Absence & { status: string })>).map((a) => ({
+          if ("success" in absencesResult && absencesResult.success) {
+            const normalized: Absence[] = (
+              absencesResult.data as Array<
+                Absence | (Absence & { status: string })
+              >
+            ).map((a) => ({
               ...a,
-              status: a.status as Absence['status'],
-            }))
+              status: a.status as Absence["status"],
+            }));
             setAbsences(normalized);
-            showDataLoadedToast("Absensi", absencesResult.data.length);
-          } else if ('error' in absencesResult) {
+          } else if ("error" in absencesResult) {
             showErrorToast("Gagal memuat data absensi", absencesResult.error);
           }
 
           // Process leave requests data
-          if ('success' in leaveResult && leaveResult.success) {
-            const normalizedLeaves: LeaveRequest[] = (leaveResult.data as Array<LeaveRequest | (LeaveRequest & { status: string })>).map((l) => ({
+          if ("success" in leaveResult && leaveResult.success) {
+            const normalizedLeaves: LeaveRequest[] = (
+              leaveResult.data as Array<
+                LeaveRequest | (LeaveRequest & { status: string })
+              >
+            ).map((l) => ({
               ...l,
-              status: l.status as LeaveRequest['status'],
-            }))
+              status: l.status as LeaveRequest["status"],
+            }));
             setLeaveRequests(normalizedLeaves);
-            showDataLoadedToast("Permintaan Izin", leaveResult.data.length);
-          } else if ('error' in leaveResult) {
+          } else if ("error" in leaveResult) {
             showErrorToast("Gagal memuat data izin", leaveResult.error);
           }
 
           // Calculate stats
           calculateStats(
-            ('success' in usersResult && usersResult.success) ? usersResult.data || [] : [],
-            ('success' in absencesResult && absencesResult.success)
-              ? ((absencesResult.data as Array<Absence | (Absence & { status: string })>).map((a) => ({
+            "success" in usersResult && usersResult.success
+              ? usersResult.data || []
+              : [],
+            "success" in absencesResult && absencesResult.success
+              ? ((
+                  absencesResult.data as Array<
+                    Absence | (Absence & { status: string })
+                  >
+                ).map((a) => ({
                   ...a,
-                  status: a.status as Absence['status'],
+                  status: a.status as Absence["status"],
                 })) as Absence[])
               : [],
-            ('success' in leaveResult && leaveResult.success)
-              ? ((leaveResult.data as Array<LeaveRequest | (LeaveRequest & { status: string })>).map((l) => ({
+            "success" in leaveResult && leaveResult.success
+              ? ((
+                  leaveResult.data as Array<
+                    LeaveRequest | (LeaveRequest & { status: string })
+                  >
+                ).map((l) => ({
                   ...l,
-                  status: l.status as LeaveRequest['status'],
+                  status: l.status as LeaveRequest["status"],
                 })) as LeaveRequest[])
               : []
           );
@@ -167,14 +182,18 @@ export default function AdminDashboard() {
     };
   }, []);
 
-  const calculateStats = (usersData: User[], absencesData: Absence[], leaveData: LeaveRequest[]) => {
+  const calculateStats = (
+    usersData: User[],
+    absencesData: Absence[],
+    leaveData: LeaveRequest[]
+  ) => {
     const today = new Date();
-    const todayString = today.toISOString().split('T')[0];
-    
+    const todayString = today.toISOString().split("T")[0];
+
     // Filter data for today
     const absensiHariIni = absencesData.filter((a) => {
       const absenceDate = new Date(a.date);
-      const absenceDateString = absenceDate.toISOString().split('T')[0];
+      const absenceDateString = absenceDate.toISOString().split("T")[0];
       return absenceDateString === todayString;
     });
 
@@ -194,32 +213,46 @@ export default function AdminDashboard() {
     const totalKaryawan = usersData.filter((u) => u.statusId === 1).length;
     // Kurangi absen dengan jumlah karyawan yang memiliki izin approved hari ini
     const approvedLeaveToday = leaveData.filter((l) => {
-      if (l.status !== 'Approved') return false;
+      if (l.status !== "Approved") return false;
       const s = new Date(l.startDate);
       const e = new Date(l.endDate);
-      const today0 = new Date(todayString + 'T00:00:00.000Z');
-      return today0 >= new Date(s.toISOString().slice(0,10) + 'T00:00:00.000Z') && today0 <= new Date(e.toISOString().slice(0,10) + 'T00:00:00.000Z');
+      const today0 = new Date(todayString + "T00:00:00.000Z");
+      return (
+        today0 >= new Date(s.toISOString().slice(0, 10) + "T00:00:00.000Z") &&
+        today0 <= new Date(e.toISOString().slice(0, 10) + "T00:00:00.000Z")
+      );
     }).length;
-    const absenHariIni = Math.max(totalKaryawan - hadirHariIni - approvedLeaveToday, 0);
-    const tingkatKehadiran = totalKaryawan > 0 ? (hadirHariIni / totalKaryawan) * 100 : 0;
+    const absenHariIni = Math.max(
+      totalKaryawan - hadirHariIni - approvedLeaveToday,
+      0
+    );
+    const tingkatKehadiran =
+      totalKaryawan > 0 ? (hadirHariIni / totalKaryawan) * 100 : 0;
 
     // Leave requests stats
-    const pendingIzin = leaveData.filter(l => l.status === 'Pending').length;
-    const approvedIzin = leaveData.filter(l => l.status === 'Approved').length;
-    const rejectedIzin = leaveData.filter(l => l.status === 'Rejected').length;
+    const pendingIzin = leaveData.filter((l) => l.status === "Pending").length;
+    const approvedIzin = leaveData.filter(
+      (l) => l.status === "Approved"
+    ).length;
+    const rejectedIzin = leaveData.filter(
+      (l) => l.status === "Rejected"
+    ).length;
 
     // Calculate average attendance for the last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const recentAbsences = absencesData.filter((a) => {
       const absenceDate = new Date(a.date);
       return absenceDate >= thirtyDaysAgo;
     });
 
     const totalAbsences = recentAbsences.length;
-    const totalPresent = recentAbsences.filter(a => a.checkIn !== null).length;
-    const rataRataKehadiran = totalAbsences > 0 ? (totalPresent / totalAbsences) * 100 : 0;
+    const totalPresent = recentAbsences.filter(
+      (a) => a.checkIn !== null
+    ).length;
+    const rataRataKehadiran =
+      totalAbsences > 0 ? (totalPresent / totalAbsences) * 100 : 0;
 
     setStats({
       totalKaryawan,
@@ -230,7 +263,7 @@ export default function AdminDashboard() {
       approvedIzin,
       rejectedIzin,
       tingkatKehadiran,
-      rataRataKehadiran
+      rataRataKehadiran,
     });
   };
 
@@ -240,46 +273,65 @@ export default function AdminDashboard() {
       const [usersResult, absencesResult, leaveResult] = await Promise.all([
         getAllUsersCached(),
         getAllAbsencesCached(),
-        getAllLeaveRequestsCached()
+        getAllLeaveRequestsCached(),
       ]);
 
-      if ('success' in usersResult && usersResult.success) {
+      if ("success" in usersResult && usersResult.success) {
         // Users data processed in calculateStats
       }
-      if ('success' in absencesResult && absencesResult.success) {
-        const normalized: Absence[] = (absencesResult.data as Array<Absence | (Absence & { status: string })>).map((a) => ({
+      if ("success" in absencesResult && absencesResult.success) {
+        const normalized: Absence[] = (
+          absencesResult.data as Array<Absence | (Absence & { status: string })>
+        ).map((a) => ({
           ...a,
-          status: a.status as Absence['status'],
-        }))
+          status: a.status as Absence["status"],
+        }));
         setAbsences(normalized);
       }
-      if ('success' in leaveResult && leaveResult.success) {
-        const normalizedLeaves: LeaveRequest[] = (leaveResult.data as Array<LeaveRequest | (LeaveRequest & { status: string })>).map((l) => ({
+      if ("success" in leaveResult && leaveResult.success) {
+        const normalizedLeaves: LeaveRequest[] = (
+          leaveResult.data as Array<
+            LeaveRequest | (LeaveRequest & { status: string })
+          >
+        ).map((l) => ({
           ...l,
-          status: l.status as LeaveRequest['status'],
-        }))
+          status: l.status as LeaveRequest["status"],
+        }));
         setLeaveRequests(normalizedLeaves);
       }
 
       calculateStats(
-        ('success' in usersResult && usersResult.success) ? usersResult.data || [] : [],
-        ('success' in absencesResult && absencesResult.success)
-          ? ((absencesResult.data as Array<Absence | (Absence & { status: string })>).map((a) => ({
+        "success" in usersResult && usersResult.success
+          ? usersResult.data || []
+          : [],
+        "success" in absencesResult && absencesResult.success
+          ? ((
+              absencesResult.data as Array<
+                Absence | (Absence & { status: string })
+              >
+            ).map((a) => ({
               ...a,
-              status: a.status as Absence['status'],
+              status: a.status as Absence["status"],
             })) as Absence[])
           : [],
-        ('success' in leaveResult && leaveResult.success)
-          ? ((leaveResult.data as Array<LeaveRequest | (LeaveRequest & { status: string })>).map((l) => ({
+        "success" in leaveResult && leaveResult.success
+          ? ((
+              leaveResult.data as Array<
+                LeaveRequest | (LeaveRequest & { status: string })
+              >
+            ).map((l) => ({
               ...l,
-              status: l.status as LeaveRequest['status'],
+              status: l.status as LeaveRequest["status"],
             })) as LeaveRequest[])
           : []
       );
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Error refreshing data:", err);
-      showErrorToast("Gagal refresh data", "Terjadi kesalahan saat memperbarui data");
+      showErrorToast(
+        "Gagal refresh data",
+        "Terjadi kesalahan saat memperbarui data"
+      );
     } finally {
       setLoading(false);
     }
@@ -288,29 +340,32 @@ export default function AdminDashboard() {
   // Helper functions
   const formatTimeDisplay = (time?: string | Date | null) => {
     if (!time) return "-";
-    
+
     if (time instanceof Date) {
-      const localTime = new Date(time.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+      const localTime = new Date(
+        time.toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+      );
       return localTime.toTimeString().slice(0, 5);
-    } else if (typeof time === 'string') {
+    } else if (typeof time === "string") {
       return time;
     }
-    
+
     return "-";
   };
 
-
   // Filter data for today
   const today = new Date();
-  const todayString = today.toISOString().split('T')[0];
+  const todayString = today.toISOString().split("T")[0];
   const absensiHariIni = absences.filter((a) => {
     const absenceDate = new Date(a.date);
-    const absenceDateString = absenceDate.toISOString().split('T')[0];
+    const absenceDateString = absenceDate.toISOString().split("T")[0];
     return absenceDateString === todayString;
   });
 
   const recentAbsensi = absensiHariIni.slice(0, 5);
-  const recentLeaveRequests = leaveRequests.filter(l => l.status === 'Pending').slice(0, 5);
+  const recentLeaveRequests = leaveRequests
+    .filter((l) => l.status === "Pending")
+    .slice(0, 5);
 
   if (loading) {
     return (
@@ -335,12 +390,14 @@ export default function AdminDashboard() {
           </p>
           {lastUpdated && (
             <p className="text-xs text-muted-foreground mt-1">
-              Terakhir diperbarui: {lastUpdated.toLocaleString('id-ID')}
+              Terakhir diperbarui: {lastUpdated.toLocaleString("id-ID")}
             </p>
           )}
         </div>
         <Button onClick={refreshData} disabled={loading} variant="outline">
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+          />
           Refresh Data
         </Button>
       </div>
@@ -349,18 +406,24 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Karyawan</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Karyawan
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalKaryawan}</div>
-            <p className="text-xs text-muted-foreground">Seluruh karyawan aktif</p>
+            <p className="text-xs text-muted-foreground">
+              Seluruh karyawan aktif
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hadir Hari Ini</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Hadir Hari Ini
+            </CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -369,8 +432,8 @@ export default function AdminDashboard() {
               {stats.tingkatKehadiran.toFixed(1)}% kehadiran
             </p>
             <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div 
-                className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+              <div
+                className="bg-green-500 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${Math.min(stats.tingkatKehadiran, 100)}%` }}
               ></div>
             </div>
@@ -384,7 +447,9 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.terlambatHariIni}</div>
-            <p className="text-xs text-muted-foreground">Karyawan terlambat hari ini</p>
+            <p className="text-xs text-muted-foreground">
+              Karyawan terlambat hari ini
+            </p>
           </CardContent>
         </Card>
 
@@ -395,7 +460,9 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.absenHariIni}</div>
-            <p className="text-xs text-muted-foreground">Belum absen hari ini</p>
+            <p className="text-xs text-muted-foreground">
+              Belum absen hari ini
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -409,13 +476,17 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.pendingIzin}</div>
-            <p className="text-xs text-muted-foreground">Menunggu persetujuan</p>
+            <p className="text-xs text-muted-foreground">
+              Menunggu persetujuan
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Izin Disetujui</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Izin Disetujui
+            </CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -430,20 +501,29 @@ export default function AdminDashboard() {
             <Calendar className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{
-              leaveRequests.filter(l => {
-                if (l.status !== 'Approved') return false;
-                const s = new Date(l.startDate);
-                const e = new Date(l.endDate);
-                const today0 = new Date(todayString + 'T00:00:00.000Z');
-                return today0 >= new Date(s.toISOString().slice(0,10) + 'T00:00:00.000Z') && today0 <= new Date(e.toISOString().slice(0,10) + 'T00:00:00.000Z');
-              }).length
-            }</div>
-            <p className="text-xs text-muted-foreground">Karyawan berizin hari ini</p>
+            <div className="text-2xl font-bold">
+              {
+                leaveRequests.filter((l) => {
+                  if (l.status !== "Approved") return false;
+                  const s = new Date(l.startDate);
+                  const e = new Date(l.endDate);
+                  const today0 = new Date(todayString + "T00:00:00.000Z");
+                  return (
+                    today0 >=
+                      new Date(
+                        s.toISOString().slice(0, 10) + "T00:00:00.000Z"
+                      ) &&
+                    today0 <=
+                      new Date(e.toISOString().slice(0, 10) + "T00:00:00.000Z")
+                  );
+                }).length
+              }
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Karyawan berizin hari ini
+            </p>
           </CardContent>
         </Card>
-
-
       </div>
 
       {/* Recent Activity Grid */}
@@ -462,13 +542,21 @@ export default function AdminDashboard() {
               {recentAbsensi.length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Belum ada absensi hari ini</p>
+                  <p className="text-muted-foreground">
+                    Belum ada absensi hari ini
+                  </p>
                 </div>
               ) : (
                 recentAbsensi.map((item) => {
-      const checkInTime = item.checkIn ? new Date(item.checkIn) : null;
-      const isLate = checkInTime && (checkInTime.getHours() > 8 || (checkInTime.getHours() === 8 && checkInTime.getMinutes() > 15));
-                  
+                  const checkInTime = item.checkIn
+                    ? new Date(item.checkIn)
+                    : null;
+                  const isLate =
+                    checkInTime &&
+                    (checkInTime.getHours() > 8 ||
+                      (checkInTime.getHours() === 8 &&
+                        checkInTime.getMinutes() > 15));
+
                   return (
                     <div
                       key={item.id}
@@ -510,7 +598,9 @@ export default function AdminDashboard() {
               {recentLeaveRequests.length === 0 ? (
                 <div className="text-center py-8">
                   <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                  <p className="text-muted-foreground">Tidak ada permintaan izin pending</p>
+                  <p className="text-muted-foreground">
+                    Tidak ada permintaan izin pending
+                  </p>
                 </div>
               ) : (
                 recentLeaveRequests.map((request) => (
@@ -525,7 +615,10 @@ export default function AdminDashboard() {
                       <div>
                         <p className="font-medium">{request.user.name}</p>
                         <p className="text-sm text-gray-500">
-                          {request.type} - {new Date(request.startDate).toLocaleDateString('id-ID')}
+                          {request.type} -{" "}
+                          {new Date(request.startDate).toLocaleDateString(
+                            "id-ID"
+                          )}
                         </p>
                       </div>
                     </div>

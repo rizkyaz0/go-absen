@@ -13,21 +13,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Calendar, 
-  Clock, 
-  Search, 
-  Filter, 
+import {
+  Calendar,
+  Clock,
+  Search,
+  Filter,
   RefreshCw,
   CheckCircle,
   XCircle,
   Eye,
   Check,
   X,
-  FileText
+  FileText,
 } from "lucide-react";
-import { getAllLeaveRequests, updateLeaveRequestStatus, resetMonthlyLeaveQuota } from "@/lib/actions";
-import { showErrorToast, showLeaveStatusUpdatedToast, showSuccessToast } from "@/lib/toast-utils";
+import {
+  getAllLeaveRequests,
+  updateLeaveRequestStatus,
+  resetMonthlyLeaveQuota,
+} from "@/lib/actions";
+import {
+  showErrorToast,
+  showLeaveStatusUpdatedToast,
+  showSuccessToast,
+} from "@/lib/toast-utils";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -67,16 +75,19 @@ export default function IzinPage() {
         setLoading(true);
         const result = await getAllLeaveRequests();
         if (result.success) {
-          const normalized: Izin[] = (result.data as Array<Izin | (Izin & { startDate: Date; endDate: Date })>).map((l) => ({
+          const normalized: Izin[] = (
+            result.data as Array<
+              Izin | (Izin & { startDate: Date; endDate: Date })
+            >
+          ).map((l) => ({
             ...l,
             startDate: l.startDate,
             endDate: l.endDate,
-          }))
+          }));
           setIzinData(normalized);
           setFilteredIzin(normalized);
           setLastUpdated(new Date());
-          showSuccessToast("Data izin berhasil dimuat", `${result.data.length} permintaan ditemukan`);
-        } else if ('error' in result) {
+        } else if ("error" in result) {
           showErrorToast("Gagal memuat data izin", result.error);
         }
       } catch (err) {
@@ -118,18 +129,28 @@ export default function IzinPage() {
       setLoading(true);
       const result = await getAllLeaveRequests();
       if (result.success) {
-        const normalized: Izin[] = (result.data as Array<Izin | (Izin & { startDate: Date; endDate: Date })>).map((l) => ({
+        const normalized: Izin[] = (
+          result.data as Array<
+            Izin | (Izin & { startDate: Date; endDate: Date })
+          >
+        ).map((l) => ({
           ...l,
           startDate: l.startDate,
           endDate: l.endDate,
-        }))
+        }));
         setIzinData(normalized);
         setLastUpdated(new Date());
-        showSuccessToast("Data berhasil diperbarui", "Data izin telah di-refresh");
+        showSuccessToast(
+          "Data berhasil diperbarui",
+          "Data izin telah di-refresh"
+        );
       }
     } catch (err) {
       console.error("Error refreshing data:", err);
-      showErrorToast("Gagal refresh data", "Terjadi kesalahan saat memperbarui data");
+      showErrorToast(
+        "Gagal refresh data",
+        "Terjadi kesalahan saat memperbarui data"
+      );
     } finally {
       setLoading(false);
     }
@@ -147,7 +168,7 @@ export default function IzinPage() {
       setIzinData((prev) =>
         prev.map((item) => (item.id === id ? { ...item, status } : item))
       );
-      
+
       showLeaveStatusUpdatedToast(status);
     } catch (err) {
       showErrorToast("Gagal update status izin", (err as Error).message);
@@ -184,12 +205,12 @@ export default function IzinPage() {
 
   const getTypeBadge = (type: string) => {
     const typeColors: Record<string, string> = {
-      "Cuti": "bg-blue-100 text-blue-800",
-      "Izin": "bg-purple-100 text-purple-800",
-      "Sakit": "bg-orange-100 text-orange-800",
-      "Personal": "bg-gray-100 text-gray-800",
+      Cuti: "bg-blue-100 text-blue-800",
+      Izin: "bg-purple-100 text-purple-800",
+      Sakit: "bg-orange-100 text-orange-800",
+      Personal: "bg-gray-100 text-gray-800",
     };
-    
+
     return (
       <Badge className={typeColors[type] || "bg-gray-100 text-gray-800"}>
         {type}
@@ -199,7 +220,7 @@ export default function IzinPage() {
 
   const formatDate = (date: string | Date) => {
     const d = date instanceof Date ? date : new Date(date);
-    return d.toLocaleDateString('id-ID');
+    return d.toLocaleDateString("id-ID");
   };
 
   const calculateDays = (startDate: string | Date, endDate: string | Date) => {
@@ -227,24 +248,28 @@ export default function IzinPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Kelola Izin & Cuti</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Kelola Izin & Cuti
+          </h2>
           <p className="text-muted-foreground">
             Kelola permintaan izin dan cuti karyawan
           </p>
           {lastUpdated && (
             <p className="text-xs text-muted-foreground mt-1">
-              Terakhir diperbarui: {lastUpdated.toLocaleString('id-ID')}
+              Terakhir diperbarui: {lastUpdated.toLocaleString("id-ID")}
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
-        <Button onClick={refreshData} disabled={loading} variant="outline">
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-        <Button onClick={() => setShowResetModal(true)} variant="destructive">
-          Reset Jatah Cuti Bulanan
-        </Button>
+          <Button onClick={refreshData} disabled={loading} variant="outline">
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+          <Button onClick={() => setShowResetModal(true)} variant="destructive">
+            Reset Jatah Cuti Bulanan
+          </Button>
         </div>
       </div>
 
@@ -255,49 +280,57 @@ export default function IzinPage() {
             <div className="flex items-center">
               <FileText className="h-8 w-8 text-blue-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Total Permintaan</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Permintaan
+                </p>
                 <p className="text-2xl font-bold">{filteredIzin.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
               <Clock className="h-8 w-8 text-yellow-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Pending
+                </p>
                 <p className="text-2xl font-bold">
-                  {filteredIzin.filter(i => i.status === 'Pending').length}
+                  {filteredIzin.filter((i) => i.status === "Pending").length}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
               <CheckCircle className="h-8 w-8 text-green-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Disetujui</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Disetujui
+                </p>
                 <p className="text-2xl font-bold">
-                  {filteredIzin.filter(i => i.status === 'Approved').length}
+                  {filteredIzin.filter((i) => i.status === "Approved").length}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
               <XCircle className="h-8 w-8 text-red-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Ditolak</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Ditolak
+                </p>
                 <p className="text-2xl font-bold">
-                  {filteredIzin.filter(i => i.status === 'Rejected').length}
+                  {filteredIzin.filter((i) => i.status === "Rejected").length}
                 </p>
               </div>
             </div>
@@ -328,7 +361,7 @@ export default function IzinPage() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="statusFilter">Filter Status</Label>
               <select
@@ -343,7 +376,7 @@ export default function IzinPage() {
                 <option value="Rejected">Rejected</option>
               </select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="typeFilter">Filter Tipe</Label>
               <select
@@ -359,11 +392,11 @@ export default function IzinPage() {
                 <option value="Personal">Personal</option>
               </select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Reset Filter</Label>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full"
                 onClick={() => {
                   setSearchQuery("");
@@ -383,19 +416,21 @@ export default function IzinPage() {
         <CardHeader>
           <CardTitle>Daftar Permintaan Izin</CardTitle>
           <CardDescription>
-            Kelola permintaan izin dan cuti karyawan ({filteredIzin.length} permintaan)
+            Kelola permintaan izin dan cuti karyawan ({filteredIzin.length}{" "}
+            permintaan)
           </CardDescription>
         </CardHeader>
         <CardContent>
           {filteredIzin.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground mb-2">Tidak ada permintaan izin</h3>
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                Tidak ada permintaan izin
+              </h3>
               <p className="text-sm text-muted-foreground">
-                {searchQuery || statusFilter !== "all" || typeFilter !== "all" 
+                {searchQuery || statusFilter !== "all" || typeFilter !== "all"
                   ? "Tidak ada permintaan yang sesuai dengan filter yang dipilih"
-                  : "Belum ada permintaan izin yang tersedia"
-                }
+                  : "Belum ada permintaan izin yang tersedia"}
               </p>
             </div>
           ) : (
@@ -403,8 +438,12 @@ export default function IzinPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">Karyawan</th>
-                    <th className="text-left py-3 px-4 font-medium">Tipe Izin</th>
+                    <th className="text-left py-3 px-4 font-medium">
+                      Karyawan
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium">
+                      Tipe Izin
+                    </th>
                     <th className="text-left py-3 px-4 font-medium">Periode</th>
                     <th className="text-left py-3 px-4 font-medium">Durasi</th>
                     <th className="text-left py-3 px-4 font-medium">Status</th>
@@ -414,7 +453,10 @@ export default function IzinPage() {
                 </thead>
                 <tbody>
                   {filteredIzin.map((izin) => (
-                    <tr key={izin.id} className="border-b hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={izin.id}
+                      className="border-b hover:bg-gray-50 transition-colors"
+                    >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
@@ -428,9 +470,7 @@ export default function IzinPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-4">
-                        {getTypeBadge(izin.type)}
-                      </td>
+                      <td className="py-4 px-4">{getTypeBadge(izin.type)}</td>
                       <td className="py-4 px-4">
                         <div className="text-sm">
                           <div className="flex items-center gap-2">
@@ -456,7 +496,13 @@ export default function IzinPage() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => window.location.href = `/admin/dashboard/izin/${izin.id}`}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              (window.location.href = `/admin/dashboard/izin/${izin.id}`)
+                            }
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
                           {izin.status === "Pending" && (
@@ -464,7 +510,9 @@ export default function IzinPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => updateStatus(izin.id, "Approved")}
+                                onClick={() =>
+                                  updateStatus(izin.id, "Approved")
+                                }
                                 className="text-green-600 hover:text-green-700"
                               >
                                 <Check className="h-4 w-4" />
@@ -472,7 +520,9 @@ export default function IzinPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => updateStatus(izin.id, "Rejected")}
+                                onClick={() =>
+                                  updateStatus(izin.id, "Rejected")
+                                }
                                 className="text-red-600 hover:text-red-700"
                               >
                                 <X className="h-4 w-4" />
@@ -500,11 +550,14 @@ export default function IzinPage() {
           try {
             setIsResetting(true);
             const result = await resetMonthlyLeaveQuota();
-            if ('error' in result && result.error) {
-              showErrorToast('Gagal reset jatah cuti', result.error);
+            if ("error" in result && result.error) {
+              showErrorToast("Gagal reset jatah cuti", result.error);
               return;
             }
-            showSuccessToast('Berhasil', 'Jatah cuti bulan berjalan telah di-reset');
+            showSuccessToast(
+              "Berhasil",
+              "Jatah cuti bulan berjalan telah di-reset"
+            );
             await refreshData();
           } finally {
             setIsResetting(false);
@@ -513,7 +566,7 @@ export default function IzinPage() {
         }}
         title="Reset Jatah Cuti Bulanan"
         description="Tindakan ini akan mengaktifkan kembali jatah cuti untuk bulan berjalan tanpa menghapus data cuti sebelumnya. Lanjutkan?"
-        confirmText={isResetting ? 'Memproses...' : 'Ya, Reset Sekarang'}
+        confirmText={isResetting ? "Memproses..." : "Ya, Reset Sekarang"}
         cancelText="Batal"
         variant="destructive"
         isLoading={isResetting}

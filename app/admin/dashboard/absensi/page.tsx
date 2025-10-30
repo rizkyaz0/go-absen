@@ -12,29 +12,29 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Calendar, 
-  Clock, 
-  Users, 
-  Search, 
-  Filter, 
-  Download, 
+import {
+  Calendar,
+  Clock,
+  Users,
+  Search,
+  Filter,
+  Download,
   RefreshCw,
   CheckCircle,
   XCircle,
   Trash2,
 } from "lucide-react";
 import { getAllAbsencesCached, deleteAbsence } from "@/lib/actions";
-import { toZonedTime, format } from 'date-fns-tz';
+import { toZonedTime, format } from "date-fns-tz";
 import { showErrorToast, showSuccessToast } from "@/lib/toast-utils";
 import { Toaster } from "@/components/ui/sonner";
 
 interface Absence {
   id: number;
-  user: { 
-    id: number; 
-    name: string; 
-    roleId?: number; 
+  user: {
+    id: number;
+    name: string;
+    roleId?: number;
     statusId?: number;
     email?: string;
   };
@@ -62,35 +62,36 @@ export default function AbsensiPage() {
       try {
         setLoading(true);
         const result = await getAllAbsencesCached();
-        if ('success' in result && result.success) {
-          const normalized: Absence[] = (result.data as Array<{
-            id: number;
-            user: Absence['user'];
-            shiftId?: number | null;
-            date: string | Date;
-            checkIn?: string | Date | null;
-            checkOut?: string | Date | null;
-            status: string;
-            note?: string | null;
-            createdAt?: string | Date;
-            updatedAt?: string | Date;
-          }>).map((a) => ({
+        if ("success" in result && result.success) {
+          const normalized: Absence[] = (
+            result.data as Array<{
+              id: number;
+              user: Absence["user"];
+              shiftId?: number | null;
+              date: string | Date;
+              checkIn?: string | Date | null;
+              checkOut?: string | Date | null;
+              status: string;
+              note?: string | null;
+              createdAt?: string | Date;
+              updatedAt?: string | Date;
+            }>
+          ).map((a) => ({
             id: a.id,
             user: a.user,
             shiftId: a.shiftId ?? null,
             date: a.date,
             checkIn: a.checkIn ?? null,
             checkOut: a.checkOut ?? null,
-            status: (a.status as string) as Absence['status'],
+            status: a.status as string as Absence["status"],
             note: a.note ?? undefined,
             createdAt: a.createdAt,
             updatedAt: a.updatedAt,
-          }))
+          }));
           setAbsences(normalized);
           setFilteredAbsences(normalized);
           setLastUpdated(new Date());
-          showSuccessToast("Data absensi berhasil dimuat", `${result.data.length} record ditemukan`);
-        } else if ('error' in result) {
+        } else if ("error" in result) {
           showErrorToast("Gagal memuat data absensi", result.error);
         }
       } catch (err) {
@@ -112,7 +113,7 @@ export default function AbsensiPage() {
     if (filterDate) {
       filtered = filtered.filter((a) => {
         const absenceDate = new Date(a.date);
-        const absenceDateString = absenceDate.toISOString().split('T')[0];
+        const absenceDateString = absenceDate.toISOString().split("T")[0];
         return absenceDateString === filterDate;
       });
     }
@@ -136,37 +137,45 @@ export default function AbsensiPage() {
     try {
       setLoading(true);
       const result = await getAllAbsencesCached();
-      if ('success' in result && result.success) {
-        const normalized: Absence[] = (result.data as Array<{
-          id: number;
-          user: Absence['user'];
-          shiftId?: number | null;
-          date: string | Date;
-          checkIn?: string | Date | null;
-          checkOut?: string | Date | null;
-          status: string;
-          note?: string | null;
-          createdAt?: string | Date;
-          updatedAt?: string | Date;
-        }>).map((a) => ({
+      if ("success" in result && result.success) {
+        const normalized: Absence[] = (
+          result.data as Array<{
+            id: number;
+            user: Absence["user"];
+            shiftId?: number | null;
+            date: string | Date;
+            checkIn?: string | Date | null;
+            checkOut?: string | Date | null;
+            status: string;
+            note?: string | null;
+            createdAt?: string | Date;
+            updatedAt?: string | Date;
+          }>
+        ).map((a) => ({
           id: a.id,
           user: a.user,
           shiftId: a.shiftId ?? null,
           date: a.date,
           checkIn: a.checkIn ?? null,
           checkOut: a.checkOut ?? null,
-          status: (a.status as string) as Absence['status'],
+          status: a.status as string as Absence["status"],
           note: a.note ?? undefined,
           createdAt: a.createdAt,
           updatedAt: a.updatedAt,
-        }))
+        }));
         setAbsences(normalized);
         setLastUpdated(new Date());
-        showSuccessToast("Data berhasil diperbarui", "Data absensi telah di-refresh");
+        showSuccessToast(
+          "Data berhasil diperbarui",
+          "Data absensi telah di-refresh"
+        );
       }
     } catch (err) {
       console.error("Error refreshing data:", err);
-      showErrorToast("Gagal refresh data", "Terjadi kesalahan saat memperbarui data");
+      showErrorToast(
+        "Gagal refresh data",
+        "Terjadi kesalahan saat memperbarui data"
+      );
     } finally {
       setLoading(false);
     }
@@ -180,37 +189,48 @@ export default function AbsensiPage() {
         return;
       }
 
-      setAbsences(prev => prev.filter(a => a.id !== id));
-      showSuccessToast("Absensi berhasil dihapus", "Data absensi telah dihapus");
+      setAbsences((prev) => prev.filter((a) => a.id !== id));
+      showSuccessToast(
+        "Absensi berhasil dihapus",
+        "Data absensi telah dihapus"
+      );
     } catch (err) {
       console.error("Error deleting absence:", err);
-      showErrorToast("Gagal menghapus absensi", "Terjadi kesalahan saat menghapus data");
+      showErrorToast(
+        "Gagal menghapus absensi",
+        "Terjadi kesalahan saat menghapus data"
+      );
     }
   };
 
   const exportToCSV = () => {
     const csvContent = [
-      ['Nama', 'Tanggal', 'Check In', 'Check Out', 'Status', 'Catatan'],
-      ...filteredAbsences.map(absence => [
+      ["Nama", "Tanggal", "Check In", "Check Out", "Status", "Catatan"],
+      ...filteredAbsences.map((absence) => [
         absence.user.name,
         formatDate(absence.date),
         formatTime(absence.checkIn),
         formatTime(absence.checkOut),
         absence.status,
-        absence.note || '-'
-      ])
-    ].map(row => row.join(',')).join('\n');
+        absence.note || "-",
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `absensi-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `absensi-${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     showSuccessToast("Export berhasil", "File CSV telah didownload");
   };
 
@@ -219,8 +239,8 @@ export default function AbsensiPage() {
     if (!date) return "-";
     const d = date instanceof Date ? date : new Date(date as string | number);
     if (Number.isNaN(d.getTime())) return "-";
-    
-    const localDate = toZonedTime(d, 'Asia/Jakarta');
+
+    const localDate = toZonedTime(d, "Asia/Jakarta");
     const day = String(localDate.getDate()).padStart(2, "0");
     const month = String(localDate.getMonth() + 1).padStart(2, "0");
     const year = localDate.getFullYear();
@@ -232,20 +252,30 @@ export default function AbsensiPage() {
     if (!time) return "-";
     const d = time instanceof Date ? time : new Date(time);
     if (Number.isNaN(d.getTime())) return "-";
-    
-    const localTime = toZonedTime(d, 'Asia/Jakarta');
-    return format(localTime, 'HH:mm:ss', { timeZone: 'Asia/Jakarta' });
+
+    const localTime = toZonedTime(d, "Asia/Jakarta");
+    return format(localTime, "HH:mm:ss", { timeZone: "Asia/Jakarta" });
   };
 
   const getStatusBadge = (status: string, checkIn?: string | Date | null) => {
     const checkInTime = checkIn ? new Date(checkIn) : null;
-    const isLate = checkInTime && (checkInTime.getHours() > 8 || (checkInTime.getHours() === 8 && checkInTime.getMinutes() > 15));
-    
+    const isLate =
+      checkInTime &&
+      (checkInTime.getHours() > 8 ||
+        (checkInTime.getHours() === 8 && checkInTime.getMinutes() > 15));
+
     switch (status) {
       case "Hadir":
         return (
-          <Badge variant={isLate ? "secondary" : "default"} className="flex items-center gap-1">
-            {isLate ? <Clock className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+          <Badge
+            variant={isLate ? "secondary" : "default"}
+            className="flex items-center gap-1"
+          >
+            {isLate ? (
+              <Clock className="h-3 w-3" />
+            ) : (
+              <CheckCircle className="h-3 w-3" />
+            )}
             {isLate ? "Terlambat" : "Hadir"}
           </Badge>
         );
@@ -264,18 +294,14 @@ export default function AbsensiPage() {
           </Badge>
         );
       default:
-        return (
-          <Badge variant="secondary">
-            {status}
-          </Badge>
-        );
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
   const getRoleName = (roleId?: number) => {
     const roleMap: Record<number, string> = {
       1: "Project Manager",
-      2: "Developer", 
+      2: "Developer",
       3: "Admin",
     };
     return roleId ? roleMap[roleId] || "Unknown" : "Unknown";
@@ -304,13 +330,15 @@ export default function AbsensiPage() {
           </p>
           {lastUpdated && (
             <p className="text-xs text-muted-foreground mt-1">
-              Terakhir diperbarui: {lastUpdated.toLocaleString('id-ID')}
+              Terakhir diperbarui: {lastUpdated.toLocaleString("id-ID")}
             </p>
           )}
         </div>
         <div className="flex gap-2">
           <Button onClick={refreshData} disabled={loading} variant="outline">
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button onClick={exportToCSV} variant="outline">
@@ -327,61 +355,77 @@ export default function AbsensiPage() {
             <div className="flex items-center">
               <Users className="h-8 w-8 text-blue-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Total Absensi</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Absensi
+                </p>
                 <p className="text-2xl font-bold">{filteredAbsences.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
               <CheckCircle className="h-8 w-8 text-green-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Hadir</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Hadir
+                </p>
                 <p className="text-2xl font-bold">
-                  {filteredAbsences.filter(a => a.status === 'Hadir').length}
+                  {filteredAbsences.filter((a) => a.status === "Hadir").length}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
               <Clock className="h-8 w-8 text-orange-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Terlambat</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Terlambat
+                </p>
                 <p className="text-2xl font-bold">
-                  {filteredAbsences.filter(a => {
-                  if (!a.checkIn) return false;
-                  const checkInTime = new Date(a.checkIn);
-                  return checkInTime.getHours() > 8 || (checkInTime.getHours() === 8 && checkInTime.getMinutes() > 15);
-                  }).length}
+                  {
+                    filteredAbsences.filter((a) => {
+                      if (!a.checkIn) return false;
+                      const checkInTime = new Date(a.checkIn);
+                      return (
+                        checkInTime.getHours() > 8 ||
+                        (checkInTime.getHours() === 8 &&
+                          checkInTime.getMinutes() > 15)
+                      );
+                    }).length
+                  }
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
               <XCircle className="h-8 w-8 text-red-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Absen (belum check-in)</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Absen (belum check-in)
+                </p>
                 <p className="text-2xl font-bold">
                   {(() => {
                     const today = new Date();
-                    const ymd = today.toISOString().split('T')[0];
+                    const ymd = today.toISOString().split("T")[0];
                     const presentIds = new Set<number>();
                     filteredAbsences.forEach((a) => {
-                      const d = new Date(a.date).toISOString().split('T')[0];
+                      const d = new Date(a.date).toISOString().split("T")[0];
                       if (d === ymd && a.checkIn) presentIds.add(a.user.id);
                     });
-                    const uniqueUsers = new Set(filteredAbsences.map(a => a.user.id)).size;
+                    const uniqueUsers = new Set(
+                      filteredAbsences.map((a) => a.user.id)
+                    ).size;
                     return Math.max(uniqueUsers - presentIds.size, 0);
                   })()}
                 </p>
@@ -414,7 +458,7 @@ export default function AbsensiPage() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="filterDate">Filter Tanggal</Label>
               <Input
@@ -424,7 +468,7 @@ export default function AbsensiPage() {
                 onChange={(e) => setFilterDate(e.target.value)}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="statusFilter">Filter Status</Label>
               <select
@@ -439,11 +483,11 @@ export default function AbsensiPage() {
                 <option value="Absen">Absen</option>
               </select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Reset Filter</Label>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full"
                 onClick={() => {
                   setFilterDate("");
@@ -463,19 +507,21 @@ export default function AbsensiPage() {
         <CardHeader>
           <CardTitle>Rekap Absensi</CardTitle>
           <CardDescription>
-            Data lengkap absensi seluruh karyawan ({filteredAbsences.length} record)
+            Data lengkap absensi seluruh karyawan ({filteredAbsences.length}{" "}
+            record)
           </CardDescription>
         </CardHeader>
         <CardContent>
           {filteredAbsences.length === 0 ? (
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground mb-2">Tidak ada data absensi</h3>
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                Tidak ada data absensi
+              </h3>
               <p className="text-sm text-muted-foreground">
-                {searchQuery || filterDate || statusFilter !== "all" 
+                {searchQuery || filterDate || statusFilter !== "all"
                   ? "Tidak ada data yang sesuai dengan filter yang dipilih"
-                  : "Belum ada data absensi yang tersedia"
-                }
+                  : "Belum ada data absensi yang tersedia"}
               </p>
             </div>
           ) : (
@@ -483,10 +529,16 @@ export default function AbsensiPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">Karyawan</th>
+                    <th className="text-left py-3 px-4 font-medium">
+                      Karyawan
+                    </th>
                     <th className="text-left py-3 px-4 font-medium">Tanggal</th>
-                    <th className="text-left py-3 px-4 font-medium">Check In</th>
-                    <th className="text-left py-3 px-4 font-medium">Check Out</th>
+                    <th className="text-left py-3 px-4 font-medium">
+                      Check In
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium">
+                      Check Out
+                    </th>
                     <th className="text-left py-3 px-4 font-medium">Status</th>
                     <th className="text-left py-3 px-4 font-medium">Catatan</th>
                     <th className="text-left py-3 px-4 font-medium">Aksi</th>
@@ -494,7 +546,10 @@ export default function AbsensiPage() {
                 </thead>
                 <tbody>
                   {filteredAbsences.map((absence) => (
-                    <tr key={absence.id} className="border-b hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={absence.id}
+                      className="border-b hover:bg-gray-50 transition-colors"
+                    >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
@@ -508,9 +563,15 @@ export default function AbsensiPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-4 text-sm">{formatDate(absence.date)}</td>
-                      <td className="py-4 px-4 text-sm font-mono">{formatTime(absence.checkIn)}</td>
-                      <td className="py-4 px-4 text-sm font-mono">{formatTime(absence.checkOut)}</td>
+                      <td className="py-4 px-4 text-sm">
+                        {formatDate(absence.date)}
+                      </td>
+                      <td className="py-4 px-4 text-sm font-mono">
+                        {formatTime(absence.checkIn)}
+                      </td>
+                      <td className="py-4 px-4 text-sm font-mono">
+                        {formatTime(absence.checkOut)}
+                      </td>
                       <td className="py-4 px-4">
                         {getStatusBadge(absence.status, absence.checkIn)}
                       </td>
@@ -519,8 +580,8 @@ export default function AbsensiPage() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => handleDeleteAbsence(absence.id)}
                             className="text-red-600 hover:text-red-700"
