@@ -1,0 +1,714 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+// import { Alert, AlertDescription } from "@/components/ui/alert";
+import { 
+  Calendar, 
+  Download, 
+  Filter, 
+  Search, 
+  BarChart3, 
+  PieChart,
+  TrendingUp,
+  Users,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  // Construction
+} from "lucide-react";
+import { 
+  getSummaryReport, 
+  getMonthlyReport, 
+  getLateEmployeesReport, 
+  getDailyReport,
+  getComprehensiveReport 
+} from '@/lib/actions';
+import { showExportSuccessToast, showExportErrorToast } from "@/lib/toast-utils";
+import type { WorkBook } from 'xlsx';
+
+// Helper function untuk mendapatkan inisial nama
+const getInitials = (name: string | null | undefined): string => {
+  if (!name) return '??';
+  return name
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+// Helper function untuk safe string operations
+const safeToLowerCase = (str: string | null | undefined): string => {
+  return str?.toLowerCase() || '';
+};
+
+// Helper function untuk safe split operations
+const safeSplit = (str: string | null | undefined, separator: string): string[] => {
+  return str?.split(separator) || [];
+};
+
+interface SummaryData {
+  totalHariKerja: number;
+  rataRataKehadiran: number;
+  totalTerlambat: number;
+  izinDiterima: number;
+  izinDitolak: number;
+}
+
+interface MonthlyData {
+  bulan: string;
+  workingDays: number;
+  presentUnique: number;
+  absent: number;
+  late: number;
+  leaveDays: number;
+  attendancePct: number;
+}
+
+interface LateEmployee {
+  id: number;
+  nama: string;
+  jabatan: string;
+  totalTerlambat: number;
+  bulan: string;
+}
+
+interface DailyData {
+  tanggal: string;
+  hadir: number;
+  terlambat: number;
+  absen: number;
+  izin: number;
+}
+
+export default function LaporanPage() {
+  const [filterTanggal, setFilterTanggal] = useState({
+    dari: safeSplit(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(), 'T')[0],
+    hingga: safeSplit(new Date().toISOString(), 'T')[0]
+  });
+  const [jenisLaporan, setJenisLaporan] = useState('bulanan');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  
+  // Data states
+  const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
+  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+  const [lateEmployees, setLateEmployees] = useState<LateEmployee[]>([]);
+  const [dailyData, setDailyData] = useState<DailyData[]>([]);
+
+  // Ref untuk print (removed with PDF export)
+
+  // Fetch data functions - optimized version
+  const fetchAllData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await getComprehensiveReport(filterTanggal.dari, filterTanggal.hingga);
+      if (result.success && result.data) {
+        setSummaryData(result.data.summary || null);
+        setMonthlyData(Array.isArray(result.data.monthly) ? result.data.monthly : []);
+        setLateEmployees(Array.isArray(result.data.lateEmployees) ? result.data.lateEmployees : []);
+        setDailyData(Array.isArray(result.data.daily) ? result.data.daily : []);
+        setLastUpdated(new Date());
+        setError(null); // Clear any previous errors
+      } else {
+        console.error('Error fetching comprehensive report:', result.error);
+        setError(result.error || 'Gagal memuat data laporan');
+        // Fallback to individual calls
+        await fetchDataIndividually();
+      }
+    } catch (error) {
+      console.error('Error fetching comprehensive report:', error);
+      setError('Terjadi kesalahan saat memuat data laporan');
+      // Fallback to individual calls
+      await fetchDataIndividually();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fallback function for individual data fetching
+  const fetchDataIndividually = async () => {
+    try {
+      console.log('Fetching data individually...');
+      const [summaryResult, monthlyResult, lateResult, dailyResult] = await Promise.all([
+        getSummaryReport(filterTanggal.dari, filterTanggal.hingga),
+        getMonthlyReport(new Date(filterTanggal.dari).getFullYear()),
+        getLateEmployeesReport(filterTanggal.dari, filterTanggal.hingga, 10),
+        getDailyReport(filterTanggal.dari, filterTanggal.hingga, 7)
+      ]);
+
+      console.log('Individual results:', { summaryResult, monthlyResult, lateResult, dailyResult });
+
+      if (summaryResult.success) {
+        setSummaryData(summaryResult.data || null);
+        console.log('Summary data set:', summaryResult.data);
+      } else {
+        console.error('Summary failed:', summaryResult.error);
+      }
+
+      if (monthlyResult.success) {
+        const monthly = Array.isArray(monthlyResult.data) ? monthlyResult.data : [];
+        setMonthlyData(monthly);
+        console.log('Monthly data set:', monthly);
+      } else {
+        console.error('Monthly failed:', monthlyResult.error);
+      }
+
+      if (lateResult.success) {
+        const late = Array.isArray(lateResult.data) ? lateResult.data : [];
+        setLateEmployees(late);
+        console.log('Late employees set:', late);
+      } else {
+        console.error('Late employees failed:', lateResult.error);
+      }
+
+      if (dailyResult.success) {
+        const daily = Array.isArray(dailyResult.data) ? dailyResult.data : [];
+        setDailyData(daily);
+        console.log('Daily data set:', daily);
+      } else {
+        console.error('Daily failed:', dailyResult.error);
+      }
+
+      setLastUpdated(new Date());
+      setError(null); // Clear error if any individual call succeeds
+    } catch (error) {
+      console.error('Error in fallback data fetching:', error);
+      setError('Gagal memuat data laporan');
+    }
+  };
+
+  useEffect(() => {
+    fetchAllData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterTanggal.dari, filterTanggal.hingga]);
+
+  const handleFilter = async () => {
+    await fetchAllData();
+  };
+
+  // Filter karyawan dengan safety check
+  const filteredKaryawan = Array.isArray(lateEmployees) 
+    ? lateEmployees.filter(karyawan =>
+        safeToLowerCase(karyawan.nama).includes(safeToLowerCase(searchQuery)) ||
+        safeToLowerCase(karyawan.jabatan).includes(safeToLowerCase(searchQuery))
+      )
+    : [];
+
+  // Export to PDF removed per request
+
+  // Export to Excel
+  const handleExportExcel = async () => {
+    try {
+      setExportingExcel(true);
+
+      const XLSX = await import('xlsx');
+
+      // Data untuk Excel
+      const excelData = {
+        'Ringkasan': [
+          ['Metrik', 'Nilai'],
+          ['Total Hari Kerja', summaryData?.totalHariKerja || 0],
+          ['Rata-rata Kehadiran (%)', summaryData?.rataRataKehadiran || 0],
+          ['Total Terlambat', summaryData?.totalTerlambat || 0],
+          ['Izin Diterima', summaryData?.izinDiterima || 0],
+          ['Izin Ditolak', summaryData?.izinDitolak || 0]
+        ],
+        'Rekap Bulanan': [
+          ['Bulan', 'Hari Kerja', 'Hadir Unik', 'Terlambat', 'Absen', 'Izin', 'Persentase (%)'],
+          ...monthlyData.map(item => [
+            item.bulan,
+            item.workingDays,
+            item.presentUnique,
+            item.late,
+            item.absent,
+            item.leaveDays,
+            item.attendancePct.toFixed(2)
+          ])
+        ],
+        'Karyawan Terlambat': [
+          ['Nama', 'Jabatan', 'Total Terlambat', 'Bulan'],
+          ...filteredKaryawan.map(item => [
+            item.nama,
+            item.jabatan,
+            item.totalTerlambat,
+            item.bulan
+          ])
+        ],
+        'Rekap Harian': [
+          ['Tanggal', 'Hadir', 'Terlambat', 'Absen', 'Izin'],
+          ...dailyData.map(item => [
+            new Date(item.tanggal).toLocaleDateString('id-ID'),
+            item.hadir,
+            item.terlambat,
+            item.absen,
+            item.izin
+          ])
+        ]
+      };
+
+      const workbook = XLSX.utils.book_new() as WorkBook;
+
+      // Workbook properties
+      workbook.Props = {
+        Title: 'Laporan Absensi',
+        Author: 'Go Absen',
+        CreatedDate: new Date()
+      };
+
+      // Info sheet
+      const infoSheet = XLSX.utils.aoa_to_sheet([
+        ['Laporan Absensi'],
+        ['Periode', `${new Date(filterTanggal.dari).toLocaleDateString('id-ID')} - ${new Date(filterTanggal.hingga).toLocaleDateString('id-ID')}`],
+        ['Dibuat pada', new Date().toLocaleString('id-ID')],
+        ['Total Karyawan Terlambat', filteredKaryawan.length]
+      ]);
+      infoSheet['!cols'] = [{ wch: 28 }, { wch: 40 }];
+      XLSX.utils.book_append_sheet(workbook, infoSheet, 'Informasi');
+
+      // Helper to auto fit columns
+      const autoFit = (rows: unknown[][]) => {
+        if (!rows.length) return [] as Array<{ wch: number }>;
+        const colCount = rows[0].length;
+        const widths: Array<{ wch: number }> = [];
+        for (let c = 0; c < colCount; c++) {
+          let max = 10;
+          for (let r = 0; r < rows.length; r++) {
+            const cell = rows[r]?.[c];
+            const len = String(cell ?? '').length;
+            if (len > max) max = len;
+          }
+          widths.push({ wch: Math.min(60, max + 2) });
+        }
+        return widths;
+      };
+
+      // Data sheets
+      (Object.keys(excelData) as Array<keyof typeof excelData>).forEach(sheetName => {
+        const rows = excelData[sheetName] as (string | number)[][];
+        const worksheet = XLSX.utils.aoa_to_sheet(rows as (string | number)[][]);
+        worksheet['!cols'] = autoFit(rows as unknown[][]);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      });
+
+      const fileName = `laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+      showExportSuccessToast('Excel');
+    } catch (error) {
+      console.error('Error generating Excel:', error);
+      showExportErrorToast('Excel');
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <span className="text-lg font-medium">Memuat data laporan...</span>
+        <p className="text-sm text-muted-foreground">Mohon tunggu sebentar</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Laporan Absensi</h2>
+          <p className="text-muted-foreground">
+            Analisis dan monitoring data absensi karyawan
+          </p>
+          {lastUpdated && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Terakhir diperbarui: {lastUpdated.toLocaleString('id-ID')}
+            </p>
+          )}
+          {/* Debug info */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-xs text-gray-500 mt-2">
+              Debug: Summary={summaryData ? '✓' : '✗'}, Monthly={monthlyData.length}, Late={lateEmployees.length}, Daily={dailyData.length}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleExportExcel}
+            disabled={loading || exportingExcel}
+            aria-busy={exportingExcel}
+          >
+            {exportingExcel ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            {exportingExcel ? 'Mengekspor…' : 'Export Excel'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <XCircle className="h-5 w-5 text-red-500 mr-2" />
+            <div>
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+              <button 
+                onClick={fetchAllData}
+                className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+              >
+                Coba lagi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filter Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filter Laporan
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div className="space-y-2">
+              <Label htmlFor="jenis-laporan">Jenis Laporan</Label>
+              <select 
+                id="jenis-laporan"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={jenisLaporan}
+                onChange={(e) => setJenisLaporan(e.target.value)}
+              >
+                <option value="harian">Harian</option>
+                <option value="mingguan">Mingguan</option>
+                <option value="bulanan">Bulanan</option>
+                <option value="tahunan">Tahunan</option>
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="dari-tanggal">Dari Tanggal</Label>
+              <Input 
+                id="dari-tanggal"
+                type="date" 
+                value={filterTanggal.dari}
+                onChange={(e) => setFilterTanggal({...filterTanggal, dari: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="hingga-tanggal">Hingga Tanggal</Label>
+              <Input 
+                id="hingga-tanggal"
+                type="date" 
+                value={filterTanggal.hingga}
+                onChange={(e) => setFilterTanggal({...filterTanggal, hingga: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="search">Cari Karyawan</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Input 
+                  id="search"
+                  placeholder="Cari nama atau jabatan..." 
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleFilter} className="w-full sm:w-auto" disabled={loading}>
+              <Filter className="w-4 h-4 mr-2" />
+              Terapkan Filter
+            </Button>
+            <Button variant="outline" onClick={fetchAllData} disabled={loading}>
+              <Loader2 className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Stats Summary */}
+      {summaryData && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Ringkasan Cepat</h3>
+              <p className="text-sm text-gray-600">
+                Periode: {new Date(filterTanggal.dari).toLocaleDateString('id-ID')} - {new Date(filterTanggal.hingga).toLocaleDateString('id-ID')}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-600">{summaryData.rataRataKehadiran}%</div>
+              <div className="text-sm text-gray-600">Tingkat Kehadiran</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-6">
+        {/* Summary Stats */}
+        {summaryData ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Hari Kerja</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summaryData.totalHariKerja}</div>
+                <p className="text-xs text-muted-foreground">Periodik saat ini</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Rata-rata Hadir</CardTitle>
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summaryData.rataRataKehadiran}%</div>
+                <p className="text-xs text-muted-foreground">Kehadiran rata-rata</p>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div 
+                    className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${Math.min(summaryData.rataRataKehadiran, 100)}%` }}
+                  ></div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Terlambat</CardTitle>
+                <Clock className="h-4 w-4 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summaryData.totalTerlambat}</div>
+                <p className="text-xs text-muted-foreground">Kasus keterlambatan</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Izin Diterima</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summaryData.izinDiterima}</div>
+                <p className="text-xs text-muted-foreground">Izin disetujui</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Izin Ditolak</CardTitle>
+                <XCircle className="h-4 w-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summaryData.izinDitolak}</div>
+                <p className="text-xs text-muted-foreground">Izin tidak disetujui</p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-muted-foreground">Tidak ada data ringkasan</h3>
+            <p className="text-sm text-muted-foreground">Coba ubah filter tanggal untuk melihat data</p>
+          </div>
+        )}
+
+        {/* Rekap Bulanan */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Rekap Bulanan
+            </CardTitle>
+            <CardDescription>
+              Data absensi per bulan tahun {new Date(filterTanggal.dari).getFullYear()}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {monthlyData.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4">Bulan</th>
+                      <th className="text-right py-3 px-4">Hari Kerja</th>
+                      <th className="text-right py-3 px-4">Hadir Unik</th>
+                      <th className="text-right py-3 px-4">Terlambat</th>
+                      <th className="text-right py-3 px-4">Absen</th>
+                      <th className="text-right py-3 px-4">Izin</th>
+                      <th className="text-right py-3 px-4">Persentase</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyData.map((item, index) => {
+                      const persentase = item.attendancePct.toFixed(2);
+                      return (
+                        <tr key={index} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">{item.bulan}</td>
+                          <td className="text-right py-3 px-4">{item.workingDays.toLocaleString()}</td>
+                          <td className="text-right py-3 px-4">{item.presentUnique.toLocaleString()}</td>
+                          <td className="text-right py-3 px-4">
+                            <Badge variant={item.late > 40 ? "destructive" : "secondary"}>
+                              {item.late}
+                            </Badge>
+                          </td>
+                          <td className="text-right py-3 px-4">{item.absent}</td>
+                          <td className="text-right py-3 px-4">{item.leaveDays}</td>
+                          <td className="text-right py-3 px-4 font-medium">
+                            <Badge variant={parseFloat(persentase) >= 95 ? "default" : "outline"}>
+                              {persentase}%
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-muted-foreground">Tidak ada data bulanan</h3>
+                <p className="text-sm text-muted-foreground">Data absensi bulanan belum tersedia</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Karyawan Sering Terlambat */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Karyawan dengan Keterlambatan Tertinggi
+            </CardTitle>
+            <CardDescription>
+              Top 10 karyawan dengan jumlah keterlambatan terbanyak
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {filteredKaryawan.length > 0 ? (
+              <div className="space-y-4">
+                {filteredKaryawan.map((karyawan) => (
+                  <div key={karyawan.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                        {getInitials(karyawan.nama)}
+                      </div>
+                      <div>
+                        <p className="font-semibold">{karyawan.nama}</p>
+                        <p className="text-sm text-gray-500">{karyawan.jabatan}</p>
+                        <p className="text-xs text-gray-400">{karyawan.bulan}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="destructive" className="text-lg px-3 py-1">
+                        {karyawan.totalTerlambat} kali
+                      </Badge>
+                      <p className="text-sm text-gray-500 mt-1">total terlambat</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-muted-foreground">Tidak ada data karyawan terlambat</h3>
+                <p className="text-sm text-muted-foreground">
+                  {searchQuery ? 'Tidak ada karyawan yang sesuai dengan pencarian' : 'Semua karyawan tepat waktu dalam periode ini'}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Rekap Harian */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieChart className="w-5 h-5" />
+              Rekap Harian Terakhir
+            </CardTitle>
+            <CardDescription>
+              Data absensi 7 hari terakhir
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {dailyData.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {dailyData.map((hari, index) => (
+                  <Card key={index} className="text-center hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">
+                        {new Date(hari.tanggal).toLocaleDateString('id-ID', { 
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'short'
+                        })}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Hadir:</span>
+                        <Badge variant="default">{hari.hadir}</Badge>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Terlambat:</span>
+                        <Badge variant="secondary">{hari.terlambat}</Badge>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Absen:</span>
+                        <Badge variant="outline">{hari.absen}</Badge>
+                      </div>
+                      {hari.izin > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>Izin:</span>
+                          <Badge variant="outline">{hari.izin}</Badge>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <PieChart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-muted-foreground">Tidak ada data harian</h3>
+                <p className="text-sm text-muted-foreground">Data absensi harian belum tersedia</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
