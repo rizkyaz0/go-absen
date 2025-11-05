@@ -7,7 +7,14 @@ const JWT_SECRET_STR = process.env.JWT_SECRET || "secret_key";
 const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STR);
 
 // Halaman publik (tidak perlu login)
-const publicPaths = ["/", "/login", "/register", "/faq", "/help", "/terms", "/privacy"];
+const publicPaths = [
+  "/login",
+  "/register",
+  "/faq",
+  "/help",
+  "/terms",
+  "/privacy",
+];
 
 // Halaman yang boleh diakses non-admin
 const allowedForNonAdmin = ["/dashboard"];
@@ -29,12 +36,19 @@ export async function middleware(req: NextRequest) {
 
   // ✅ 3️⃣ Kalau sudah login → verifikasi JWT
   try {
-    const { payload } = await jwtVerify<{ userId: number; roleId: number }>(token, JWT_SECRET);
+    const { payload } = await jwtVerify<{ userId: number; roleId: number }>(
+      token,
+      JWT_SECRET
+    );
     const roleId = payload.roleId;
 
     // Admin boleh akses semua
     if (roleId === 3) {
       return NextResponse.next();
+    }
+
+    if (publicPaths.includes(pathname)) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
     // Non-admin hanya boleh halaman tertentu

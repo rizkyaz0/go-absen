@@ -16,11 +16,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 // import { ActionButton } from "@/components/ActionButton";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  Plus, 
+import {
+  Users,
+  Search,
+  Filter,
+  Plus,
   RefreshCw,
   Eye,
   Edit,
@@ -29,10 +29,14 @@ import {
   Calendar,
   Shield,
   UserCheck,
-  UserX
+  UserX,
 } from "lucide-react";
 import { getAllUsers, deleteUser } from "@/lib/actions";
-import { showErrorToast, showUserDeletedToast, showSuccessToast } from "@/lib/toast-utils";
+import {
+  showErrorToast,
+  showUserDeletedToast,
+  showSuccessToast,
+} from "@/lib/toast-utils";
 import { Toaster } from "@/components/ui/sonner";
 
 interface User {
@@ -70,8 +74,7 @@ export default function KaryawanPage() {
           setUsers(result.data);
           setFilteredUsers(result.data);
           setLastUpdated(new Date());
-          showSuccessToast("Data karyawan berhasil dimuat", `${result.data.length} karyawan ditemukan`);
-        } else if ('error' in result) {
+        } else if ("error" in result) {
           showErrorToast("Gagal memuat data karyawan", result.error);
         }
       } catch (err) {
@@ -91,19 +94,25 @@ export default function KaryawanPage() {
 
     // Filter by role
     if (roleFilter !== "all") {
-      filtered = filtered.filter((user) => user.roleId?.toString() === roleFilter);
+      filtered = filtered.filter(
+        (user) => user.roleId?.toString() === roleFilter
+      );
     }
 
     // Filter by status
     if (statusFilter !== "all") {
-      filtered = filtered.filter((user) => user.statusId?.toString() === statusFilter);
+      filtered = filtered.filter(
+        (user) => user.statusId?.toString() === statusFilter
+      );
     }
 
     // Search by name or email
     if (searchQuery) {
-      filtered = filtered.filter((user) =>
-        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (user.email && user.email.toLowerCase().includes(searchQuery.toLowerCase()))
+      filtered = filtered.filter(
+        (user) =>
+          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (user.email &&
+            user.email.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
@@ -117,11 +126,17 @@ export default function KaryawanPage() {
       if (result.success) {
         setUsers(result.data);
         setLastUpdated(new Date());
-        showSuccessToast("Data berhasil diperbarui", "Data karyawan telah di-refresh");
+        showSuccessToast(
+          "Data berhasil diperbarui",
+          "Data karyawan telah di-refresh"
+        );
       }
     } catch (err) {
       console.error("Error refreshing data:", err);
-      showErrorToast("Gagal refresh data", "Terjadi kesalahan saat memperbarui data");
+      showErrorToast(
+        "Gagal refresh data",
+        "Terjadi kesalahan saat memperbarui data"
+      );
     } finally {
       setLoading(false);
     }
@@ -152,18 +167,18 @@ export default function KaryawanPage() {
     try {
       setIsDeleting(true);
       const result = await deleteUser(selectedUserId);
-      
+
       if (result.error) {
         showErrorToast("Gagal menghapus user", result.error);
         return;
       }
 
       // Hapus di UI setelah berhasil
-      const deletedUser = users.find(user => user.id === selectedUserId);
+      const deletedUser = users.find((user) => user.id === selectedUserId);
       setUsers((prev) => prev.filter((user) => user.id !== selectedUserId));
       setSelectedUserId(null);
       setDeleteModalOpen(false);
-      
+
       showUserDeletedToast(deletedUser?.name || "User");
     } catch (error) {
       showErrorToast("Gagal menghapus user", (error as Error).message);
@@ -178,15 +193,13 @@ export default function KaryawanPage() {
       2: { name: "Developer", color: "bg-green-100 text-green-800" },
       3: { name: "Admin", color: "bg-purple-100 text-purple-800" },
     };
-    
+
     if (!roleId || !roleMap[roleId]) {
       return <Badge variant="secondary">Unknown</Badge>;
     }
-    
+
     return (
-      <Badge className={roleMap[roleId].color}>
-        {roleMap[roleId].name}
-      </Badge>
+      <Badge className={roleMap[roleId].color}>{roleMap[roleId].name}</Badge>
     );
   };
 
@@ -206,14 +219,14 @@ export default function KaryawanPage() {
         </Badge>
       );
     }
-    
+
     return <Badge variant="secondary">Unknown</Badge>;
   };
 
   const formatDate = (date?: string | Date) => {
     if (!date) return "-";
     const d = date instanceof Date ? date : new Date(date);
-    return d.toLocaleDateString('id-ID');
+    return d.toLocaleDateString("id-ID");
   };
 
   if (loading) {
@@ -239,13 +252,15 @@ export default function KaryawanPage() {
           </p>
           {lastUpdated && (
             <p className="text-xs text-muted-foreground mt-1">
-              Terakhir diperbarui: {lastUpdated.toLocaleString('id-ID')}
+              Terakhir diperbarui: {lastUpdated.toLocaleString("id-ID")}
             </p>
           )}
         </div>
         <div className="flex gap-2">
           <Button onClick={refreshData} disabled={loading} variant="outline">
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button onClick={handleAdd}>
@@ -262,49 +277,57 @@ export default function KaryawanPage() {
             <div className="flex items-center">
               <Users className="h-8 w-8 text-blue-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Total Karyawan</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Karyawan
+                </p>
                 <p className="text-2xl font-bold">{filteredUsers.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
               <UserCheck className="h-8 w-8 text-green-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Active</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Active
+                </p>
                 <p className="text-2xl font-bold">
-                  {filteredUsers.filter(u => u.statusId === 1).length}
+                  {filteredUsers.filter((u) => u.statusId === 1).length}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
               <Shield className="h-8 w-8 text-purple-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Admin</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Admin
+                </p>
                 <p className="text-2xl font-bold">
-                  {filteredUsers.filter(u => u.roleId === 3).length}
+                  {filteredUsers.filter((u) => u.roleId === 3).length}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
               <UserX className="h-8 w-8 text-red-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Inactive</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Inactive
+                </p>
                 <p className="text-2xl font-bold">
-                  {filteredUsers.filter(u => u.statusId === 2).length}
+                  {filteredUsers.filter((u) => u.statusId === 2).length}
                 </p>
               </div>
             </div>
@@ -335,7 +358,7 @@ export default function KaryawanPage() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="roleFilter">Filter Role</Label>
               <select
@@ -350,7 +373,7 @@ export default function KaryawanPage() {
                 <option value="3">Admin</option>
               </select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="statusFilter">Filter Status</Label>
               <select
@@ -364,11 +387,11 @@ export default function KaryawanPage() {
                 <option value="2">Inactive</option>
               </select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Reset Filter</Label>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full"
                 onClick={() => {
                   setSearchQuery("");
@@ -388,19 +411,21 @@ export default function KaryawanPage() {
         <CardHeader>
           <CardTitle>Daftar Karyawan</CardTitle>
           <CardDescription>
-            Daftar seluruh karyawan yang terdaftar dalam sistem ({filteredUsers.length} karyawan)
+            Daftar seluruh karyawan yang terdaftar dalam sistem (
+            {filteredUsers.length} karyawan)
           </CardDescription>
         </CardHeader>
         <CardContent>
           {filteredUsers.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground mb-2">Tidak ada data karyawan</h3>
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                Tidak ada data karyawan
+              </h3>
               <p className="text-sm text-muted-foreground">
-                {searchQuery || roleFilter !== "all" || statusFilter !== "all" 
+                {searchQuery || roleFilter !== "all" || statusFilter !== "all"
                   ? "Tidak ada karyawan yang sesuai dengan filter yang dipilih"
-                  : "Belum ada karyawan yang terdaftar dalam sistem"
-                }
+                  : "Belum ada karyawan yang terdaftar dalam sistem"}
               </p>
             </div>
           ) : (
@@ -408,17 +433,24 @@ export default function KaryawanPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">Karyawan</th>
+                    <th className="text-left py-3 px-4 font-medium">
+                      Karyawan
+                    </th>
                     <th className="text-left py-3 px-4 font-medium">Email</th>
                     <th className="text-left py-3 px-4 font-medium">Role</th>
                     <th className="text-left py-3 px-4 font-medium">Status</th>
-                    <th className="text-left py-3 px-4 font-medium">Bergabung</th>
+                    <th className="text-left py-3 px-4 font-medium">
+                      Bergabung
+                    </th>
                     <th className="text-left py-3 px-4 font-medium">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUsers.map((user) => (
-                    <tr key={user.id} className="border-b hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={user.id}
+                      className="border-b hover:bg-gray-50 transition-colors"
+                    >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
@@ -426,7 +458,9 @@ export default function KaryawanPage() {
                           </div>
                           <div>
                             <p className="font-medium">{user.name}</p>
-                            <p className="text-sm text-muted-foreground">ID: {user.id}</p>
+                            <p className="text-sm text-muted-foreground">
+                              ID: {user.id}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -436,9 +470,7 @@ export default function KaryawanPage() {
                           <span className="text-sm">{user.email || "-"}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-4">
-                        {getRoleBadge(user.roleId)}
-                      </td>
+                      <td className="py-4 px-4">{getRoleBadge(user.roleId)}</td>
                       <td className="py-4 px-4">
                         {getStatusBadge(user.statusId)}
                       </td>
@@ -450,18 +482,26 @@ export default function KaryawanPage() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => router.push(`/admin/dashboard/karyawan/detail/${user.id}`)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              router.push(
+                                `/admin/dashboard/karyawan/detail/${user.id}`
+                              )
+                            }
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => handleEdit(user.id)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => handleDeleteClick(user.id)}
                             className="text-red-600 hover:text-red-700"
@@ -485,7 +525,7 @@ export default function KaryawanPage() {
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         isLoading={isDeleting}
-        itemName={users.find(user => user.id === selectedUserId)?.name}
+        itemName={users.find((user) => user.id === selectedUserId)?.name}
       />
 
       {/* Toast Notifications */}

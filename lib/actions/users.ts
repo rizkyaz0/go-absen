@@ -1,74 +1,83 @@
-'use server'
+"use server";
 
-import { cache } from 'react'
-import { unstable_cache } from 'next/cache'
-import { prisma } from '@/prisma'
-import { cookies } from 'next/headers'
-import jwt from 'jsonwebtoken'
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
+import { prisma } from "@/prisma";
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_key'
+const JWT_SECRET = process.env.JWT_SECRET || "secret_key";
 
 async function verifyToken() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('token')?.value
-  if (!token) throw new Error('Unauthorized')
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  if (!token) throw new Error("Unauthorized");
 
-  const payload = jwt.verify(token, JWT_SECRET) as { userId: number; roleId: number }
-  return payload
+  const payload = jwt.verify(token, JWT_SECRET) as {
+    userId: number;
+    roleId: number;
+  };
+  return payload;
 }
 
 export const getAllUsers = cache(async () => {
   try {
-    await verifyToken() // Semua user login bisa akses
+    await verifyToken(); // Semua user login bisa akses
 
     const users = await prisma.user.findMany({
-      select: { 
-        id: true, 
-        name: true, 
-        roleId: true, 
+      select: {
+        id: true,
+        name: true,
+        roleId: true,
         statusId: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
       },
-    })
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
 
-    return { success: true, data: users }
+    return { success: true, data: users };
   } catch (err) {
-    console.error('Error fetching users:', err)
-    return { error: 'Unauthorized' }
+    console.error("Error fetching users:", err);
+    return { error: "Unauthorized" };
   }
-})
+});
 
 // Cached version with longer TTL for admin dashboard
 export const getCachedAllUsers = unstable_cache(
   async () => {
     const users = await prisma.user.findMany({
-      select: { 
-        id: true, 
-        name: true, 
-        roleId: true, 
+      select: {
+        id: true,
+        name: true,
+        roleId: true,
         statusId: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
       },
-    })
-    return { success: true, data: users }
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    return { success: true, data: users };
   },
-  ['all-users'],
-  { 
-    tags: ['users'],
-    revalidate: 60 // 60 seconds
+  ["all-users"],
+  {
+    tags: ["users"],
+    revalidate: 60, // 60 seconds
   }
-)
+);
 
 // Wrapper function that handles authentication
 export async function getAllUsersCached() {
   try {
-    await verifyToken()
-    return await getCachedAllUsers()
+    await verifyToken();
+    return await getCachedAllUsers();
   } catch (err) {
-    console.error('Error fetching users:', err)
-    return { error: 'Unauthorized' }
+    console.error("Error fetching users:", err);
+    return { error: "Unauthorized" };
   }
 }
 
@@ -77,83 +86,83 @@ export const getCachedUserById = unstable_cache(
   async (id: number) => {
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { 
-        id: true, 
-        name: true, 
-        roleId: true, 
-        statusId: true 
+      select: {
+        id: true,
+        name: true,
+        roleId: true,
+        statusId: true,
       },
-    })
+    });
 
     if (!user) {
-      return { error: 'User tidak ditemukan' }
+      return { error: "User tidak ditemukan" };
     }
 
-    return { success: true, data: user }
+    return { success: true, data: user };
   },
-  ['user-by-id'],
-  { 
-    tags: ['users'],
-    revalidate: 60 // 60 seconds
+  ["user-by-id"],
+  {
+    tags: ["users"],
+    revalidate: 60, // 60 seconds
   }
-)
+);
 
 // Wrapper function that handles authentication
 export async function getUserByIdCached(id: number) {
   try {
-    await verifyToken()
-    return await getCachedUserById(id)
+    await verifyToken();
+    return await getCachedUserById(id);
   } catch (err) {
-    console.error('Error fetching user:', err)
-    return { error: 'Unauthorized' }
+    console.error("Error fetching user:", err);
+    return { error: "Unauthorized" };
   }
 }
 
 // Keep original for backward compatibility
 export const getUserById = cache(async (id: number) => {
   try {
-    await verifyToken() // Semua user login bisa akses
+    await verifyToken(); // Semua user login bisa akses
 
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { 
-        id: true, 
-        name: true, 
-        roleId: true, 
-        statusId: true 
+      select: {
+        id: true,
+        name: true,
+        roleId: true,
+        statusId: true,
       },
-    })
+    });
 
     if (!user) {
-      return { error: 'User tidak ditemukan' }
+      return { error: "User tidak ditemukan" };
     }
 
-    return { success: true, data: user }
+    return { success: true, data: user };
   } catch (err) {
-    console.error('Error fetching user:', err)
-    return { error: 'Unauthorized' }
+    console.error("Error fetching user:", err);
+    return { error: "Unauthorized" };
   }
-})
+});
 
 export async function createUser(userData: {
-  name: string
-  email: string
-  password: string
-  roleId: number
-  statusId: number
+  name: string;
+  email: string;
+  password: string;
+  roleId: number;
+  statusId: number;
 }) {
   try {
-    const payload = await verifyToken()
+    const payload = await verifyToken();
 
     // Hanya admin (roleId = 3) yang bisa membuat user
     if (payload.roleId !== 3) {
-      return { error: 'Forbidden' }
+      return { error: "Forbidden" };
     }
 
-    const { name, email, password, roleId, statusId } = userData
+    const { name, email, password, roleId, statusId } = userData;
 
     if (!name || !email || !password || !roleId || !statusId) {
-      return { error: 'Semua field wajib diisi' }
+      return { error: "Semua field wajib diisi" };
     }
 
     const newUser = await prisma.user.create({
@@ -164,32 +173,35 @@ export async function createUser(userData: {
         roleId,
         statusId,
       },
-      select: { 
-        id: true, 
-        name: true, 
-        roleId: true, 
-        statusId: true 
+      select: {
+        id: true,
+        name: true,
+        roleId: true,
+        statusId: true,
       }, // jangan kirim password
-    })
+    });
 
-    return { success: true, data: newUser }
+    return { success: true, data: newUser };
   } catch (err) {
-    console.error('Error creating user:', err)
-    return { error: 'Terjadi error' }
+    console.error("Error creating user:", err);
+    return { error: "Terjadi error" };
   }
 }
 
-export async function updateUser(id: number, userData: {
-  name: string
-  roleId: number
-  statusId: number
-}) {
+export async function updateUser(
+  id: number,
+  userData: {
+    name: string;
+    roleId: number;
+    statusId: number;
+  }
+) {
   try {
-    const payload = await verifyToken()
+    const payload = await verifyToken();
 
     // Hanya admin
     if (payload.roleId !== 3) {
-      return { error: 'Forbidden' }
+      return { error: "Forbidden" };
     }
 
     const updatedUser = await prisma.user.update({
@@ -199,41 +211,41 @@ export async function updateUser(id: number, userData: {
         roleId: userData.roleId,
         statusId: userData.statusId,
       },
-      select: { 
-        id: true, 
-        name: true, 
-        roleId: true, 
-        statusId: true 
+      select: {
+        id: true,
+        name: true,
+        roleId: true,
+        statusId: true,
       }, // jangan kirim password/email
-    })
+    });
 
-    return { success: true, data: updatedUser }
+    return { success: true, data: updatedUser };
   } catch (err) {
-    console.error('Error updating user:', err)
-    return { error: 'Gagal memperbarui user' }
+    console.error("Error updating user:", err);
+    return { error: "Gagal memperbarui user" };
   }
 }
 
 export async function deleteUser(id: number) {
   try {
-    const payload = await verifyToken()
+    const payload = await verifyToken();
 
     // Hanya admin
     if (payload.roleId !== 3) {
-      return { error: 'Forbidden' }
+      return { error: "Forbidden" };
     }
 
     if (isNaN(id)) {
-      return { error: 'ID tidak valid' }
+      return { error: "ID tidak valid" };
     }
 
-    await prisma.absence.deleteMany({ where: { userId: id } })
-    await prisma.leaveRequest.deleteMany({ where: { userId: id } })
-    await prisma.user.delete({ where: { id } })
+    await prisma.absence.deleteMany({ where: { userId: id } });
+    await prisma.leaveRequest.deleteMany({ where: { userId: id } });
+    await prisma.user.delete({ where: { id } });
 
-    return { success: true, message: 'User berhasil dihapus' }
+    return { success: true, message: "User berhasil dihapus" };
   } catch (err) {
-    console.error('Error deleting user:', err)
-    return { error: 'Gagal menghapus user' }
+    console.error("Error deleting user:", err);
+    return { error: "Gagal menghapus user" };
   }
 }

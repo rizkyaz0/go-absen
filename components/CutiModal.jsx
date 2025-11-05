@@ -13,8 +13,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Home } from "lucide-react";
-import { getCurrentUserCached, createLeaveRequest, getUserLeaveStatsCached } from "@/lib/actions";
+import {
+  getCurrentUserCached,
+  createLeaveRequest,
+  getUserLeaveStatsCached,
+} from "@/lib/actions";
 import { showErrorToast, showLeaveRequestToast } from "@/lib/toast-utils";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 
 export default function CutiModal() {
   const [tanggalMulai, setTanggalMulai] = useState("");
@@ -28,15 +39,15 @@ export default function CutiModal() {
     async function fetchUser() {
       try {
         const result = await getCurrentUserCached();
-        if ('error' in result) {
+        if ("error" in result) {
           console.error(result.error);
           return;
         }
         setUserId(result.id);
-        
+
         // Ambil sisa cuti
         const leaveStats = await getUserLeaveStatsCached(result.id);
-        if ('success' in leaveStats && leaveStats.success) {
+        if ("success" in leaveStats && leaveStats.success) {
           setRemainingLeave(leaveStats.data.remainingLeave);
         }
       } catch (err) {
@@ -49,13 +60,19 @@ export default function CutiModal() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!userId) {
-      showErrorToast("User belum terdeteksi", "Silakan refresh halaman dan coba lagi");
+      showErrorToast(
+        "User belum terdeteksi",
+        "Silakan refresh halaman dan coba lagi"
+      );
       return;
     }
 
     // Validasi tanggal
     if (tanggalAkhir < tanggalMulai) {
-      showErrorToast("Tanggal tidak valid", "Tanggal akhir tidak boleh lebih awal dari tanggal mulai");
+      showErrorToast(
+        "Tanggal tidak valid",
+        "Tanggal akhir tidak boleh lebih awal dari tanggal mulai"
+      );
       return;
     }
 
@@ -67,7 +84,10 @@ export default function CutiModal() {
 
     // Validasi sisa cuti
     if (requestedDays > remainingLeave) {
-      showErrorToast("Sisa cuti tidak mencukupi", `Sisa cuti: ${remainingLeave} hari, yang diminta: ${requestedDays} hari`);
+      showErrorToast(
+        "Sisa cuti tidak mencukupi",
+        `Sisa cuti: ${remainingLeave} hari, yang diminta: ${requestedDays} hari`
+      );
       return;
     }
 
@@ -92,9 +112,15 @@ export default function CutiModal() {
       window.location.reload();
     } catch (err) {
       console.error(err);
-      showErrorToast("Gagal ajukan cuti", "Terjadi kesalahan saat mengajukan cuti");
+      showErrorToast(
+        "Gagal ajukan cuti",
+        "Terjadi kesalahan saat mengajukan cuti"
+      );
     }
   };
+
+  const [openMulai, setOpenMulai] = useState(false);
+  const [openAkhir, setOpenAkhir] = useState(false);
 
   return (
     <Dialog>
@@ -114,7 +140,7 @@ export default function CutiModal() {
         <DialogDescription className="text-sm text-gray-500 mb-4">
           Isi tanggal dan alasan cuti. HRD akan meninjau pengajuan.
         </DialogDescription>
-        
+
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
           <p className="text-sm text-blue-800">
             <strong>Sisa cuti bulan ini:</strong> {remainingLeave} hari
@@ -127,24 +153,62 @@ export default function CutiModal() {
         >
           <div>
             <Label htmlFor="mulai">Tanggal Mulai</Label>
-            <Input
-              id="mulai"
-              type="date"
-              value={tanggalMulai}
-              onChange={(e) => setTanggalMulai(e.target.value)}
-              required
-            />
+            <Popover open={openMulai} onOpenChange={setOpenMulai}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between font-normal"
+                >
+                  {tanggalMulai
+                    ? new Date(tanggalMulai).toLocaleDateString("id-ID")
+                    : "Pilih tanggal mulai"}
+                  <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={tanggalMulai ? new Date(tanggalMulai) : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      setTanggalMulai(date.toLocaleDateString("sv-SE"));
+                      setOpenMulai(false);
+                    }
+                  }}
+                  captionLayout="dropdown"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div>
             <Label htmlFor="akhir">Tanggal Akhir</Label>
-            <Input
-              id="akhir"
-              type="date"
-              value={tanggalAkhir}
-              onChange={(e) => setTanggalAkhir(e.target.value)}
-              required
-            />
+            <Popover open={openAkhir} onOpenChange={setOpenAkhir}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between font-normal"
+                >
+                  {tanggalAkhir
+                    ? new Date(tanggalAkhir).toLocaleDateString("id-ID")
+                    : "Pilih tanggal Akhir"}
+                  <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={tanggalAkhir ? new Date(tanggalAkhir) : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      setTanggalAkhir(date.toLocaleDateString("sv-SE"));
+                      setOpenAkhir(false);
+                    }
+                  }}
+                  captionLayout="dropdown"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div>
