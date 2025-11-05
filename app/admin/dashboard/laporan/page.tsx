@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -11,7 +12,6 @@ import {
   Calendar, 
   Download, 
   Filter, 
-  Printer, 
   Search, 
   BarChart3, 
   PieChart,
@@ -23,9 +23,6 @@ import {
   Loader2,
   // Construction
 } from "lucide-react";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import * as XLSX from 'xlsx';
 import { 
   getSummaryReport, 
   getMonthlyReport, 
@@ -34,6 +31,7 @@ import {
   getComprehensiveReport 
 } from '@/lib/actions';
 import { showExportSuccessToast, showExportErrorToast } from "@/lib/toast-utils";
+import type { WorkBook } from 'xlsx';
 
 // Helper function untuk mendapatkan inisial nama
 const getInitials = (name: string | null | undefined): string => {
@@ -100,6 +98,7 @@ export default function LaporanPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
   
   // Data states
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
@@ -107,8 +106,7 @@ export default function LaporanPage() {
   const [lateEmployees, setLateEmployees] = useState<LateEmployee[]>([]);
   const [dailyData, setDailyData] = useState<DailyData[]>([]);
 
-  // Ref untuk print
-  const printRef = useRef<HTMLDivElement>(null);
+  // Ref untuk print (removed with PDF export)
 
   // Fetch data functions - optimized version
   const fetchAllData = async () => {
@@ -208,47 +206,15 @@ export default function LaporanPage() {
       )
     : [];
 
-  // Export to PDF
-  const handleExportPDF = async () => {
-    if (!printRef.current) return;
-    
-    try {
-      const canvas = await html2canvas(printRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 295;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      pdf.save(`laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.pdf`);
-      showExportSuccessToast('PDF');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      showExportErrorToast('PDF');
-    }
-  };
+  // Export to PDF removed per request
 
   // Export to Excel
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
+      setExportingExcel(true);
+
+      const XLSX = await import('xlsx');
+
       // Data untuk Excel
       const excelData = {
         'Ringkasan': [
@@ -292,18 +258,58 @@ export default function LaporanPage() {
         ]
       };
 
-      const workbook = XLSX.utils.book_new();
-      
-      Object.keys(excelData).forEach(sheetName => {
-        const worksheet = XLSX.utils.aoa_to_sheet(excelData[sheetName as keyof typeof excelData]);
+      const workbook = XLSX.utils.book_new() as WorkBook;
+
+      // Workbook properties
+      workbook.Props = {
+        Title: 'Laporan Absensi',
+        Author: 'Go Absen',
+        CreatedDate: new Date()
+      };
+
+      // Info sheet
+      const infoSheet = XLSX.utils.aoa_to_sheet([
+        ['Laporan Absensi'],
+        ['Periode', `${new Date(filterTanggal.dari).toLocaleDateString('id-ID')} - ${new Date(filterTanggal.hingga).toLocaleDateString('id-ID')}`],
+        ['Dibuat pada', new Date().toLocaleString('id-ID')],
+        ['Total Karyawan Terlambat', filteredKaryawan.length]
+      ]);
+      infoSheet['!cols'] = [{ wch: 28 }, { wch: 40 }];
+      XLSX.utils.book_append_sheet(workbook, infoSheet, 'Informasi');
+
+      // Helper to auto fit columns
+      const autoFit = (rows: unknown[][]) => {
+        if (!rows.length) return [] as Array<{ wch: number }>;
+        const colCount = rows[0].length;
+        const widths: Array<{ wch: number }> = [];
+        for (let c = 0; c < colCount; c++) {
+          let max = 10;
+          for (let r = 0; r < rows.length; r++) {
+            const cell = rows[r]?.[c];
+            const len = String(cell ?? '').length;
+            if (len > max) max = len;
+          }
+          widths.push({ wch: Math.min(60, max + 2) });
+        }
+        return widths;
+      };
+
+      // Data sheets
+      (Object.keys(excelData) as Array<keyof typeof excelData>).forEach(sheetName => {
+        const rows = excelData[sheetName] as (string | number)[][];
+        const worksheet = XLSX.utils.aoa_to_sheet(rows as (string | number)[][]);
+        worksheet['!cols'] = autoFit(rows as unknown[][]);
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
       });
 
-      XLSX.writeFile(workbook, `laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.xlsx`);
+      const fileName = `laporan-absensi-${safeSplit(new Date().toISOString(), 'T')[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
       showExportSuccessToast('Excel');
     } catch (error) {
       console.error('Error generating Excel:', error);
       showExportErrorToast('Excel');
+    } finally {
+      setExportingExcel(false);
     }
   };
 
@@ -339,13 +345,17 @@ export default function LaporanPage() {
           )}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportPDF} disabled={loading}>
-            <Printer className="w-4 h-4 mr-2" />
-            Print PDF
-          </Button>
-          <Button onClick={handleExportExcel} disabled={loading}>
-            <Download className="w-4 h-4 mr-2" />
-            Export Excel
+          <Button
+            onClick={handleExportExcel}
+            disabled={loading || exportingExcel}
+            aria-busy={exportingExcel}
+          >
+            {exportingExcel ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            {exportingExcel ? 'Mengekspor…' : 'Export Excel'}
           </Button>
         </div>
       </div>
@@ -459,8 +469,7 @@ export default function LaporanPage() {
         </div>
       )}
 
-      {/* Content untuk print */}
-      <div ref={printRef} className="space-y-6">
+      <div className="space-y-6">
         {/* Summary Stats */}
         {summaryData ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
